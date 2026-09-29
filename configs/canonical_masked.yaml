@@ -1,0 +1,13 @@
+schema_version: 1
+name: canonical-125m-masked
+entrypoint: scripts/horizon.py
+args:
+  ckpt: ${TTT_CKPT}/125m-ext32k.pt
+  val: ${TTT_DATA}/pg19/val.npy
+  preset: 125m-e2e-ext32k
+  mode: masked
+  n_chunks: 128
+  n_seqs: 8
+  seeds: 42,1,7,2,3
+  book_offset: 0
+  out: ${TTT_OUT}/canonical/masked.json

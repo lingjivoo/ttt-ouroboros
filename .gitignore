@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Experiment artifacts
+results/*
+!results/.gitkeep
+*.pt
+*.pth
+*.ckpt
+*.npy
+*.npz
+*.zarr/
+wandb/
+
+# Local configuration
+.env
+.env.*
+!.env.example
+.DS_Store

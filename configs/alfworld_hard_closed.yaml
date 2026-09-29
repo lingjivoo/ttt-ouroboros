@@ -1,0 +1,22 @@
+schema_version: 1
+name: alfworld-hard-closed-qwen27b
+entrypoint: scripts/alfworld_agentbench.py
+environment:
+  ALFWORLD_DATA: ${ALFWORLD_DATA}
+args:
+  model: Qwen/Qwen3.8-27B
+  policy: closed
+  episodes: 0
+  online_prequential: true
+  eval_seen_episodes: 50
+  eval_unseen_episodes: 50
+  task_types: 2,3,4,5,6
+  max_steps: 50
+  lr: 1.0e-5
+  stream_seed: 1234
+  eval_seed: 1234
+  update_scale: 1.0
+  parser_mode: official
+  no_resume: true
+  agentbench_prompts: ${AGENTBENCH_ROOT}/src/server/tasks/alfworld/prompts/alfworld_multiturn_plan_first.json
+  out: ${TTT_OUT}/agents/alfworld_hard_closed.json

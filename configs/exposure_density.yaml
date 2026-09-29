@@ -1,0 +1,15 @@
+schema_version: 1
+name: exposure-density-125m
+entrypoint: scripts/exposure_density_sweep.py
+args:
+  ckpt: ${TTT_CKPT}/125m-ext32k.pt
+  val: ${TTT_DATA}/pg19/val.npy
+  real_fraction: 0.10
+  arrangement: even
+  seed: 42
+  n_exposure: 105
+  n_seqs: 8
+  canonical_105: true
+  temperature: 1.0
+  top_p: 0.95
+  out: ${TTT_OUT}/exposure/f10_even_s42.json

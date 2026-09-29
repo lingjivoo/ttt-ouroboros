@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/lingjivoo/ttt/schemas/result.schema.json",
+  "title": "TTT experiment result",
+  "type": "object",
+  "required": ["status"],
+  "properties": {
+    "status": {"enum": ["running", "complete", "error"]},
+    "_config": {"type": "object"},
+    "error": {"type": "string"},
+    "elapsed_seconds": {"type": "number", "minimum": 0}
+  },
+  "additionalProperties": true
+}
