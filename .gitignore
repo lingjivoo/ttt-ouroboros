@@ -17,6 +17,9 @@ results/*
 *.npz
 *.zarr/
 wandb/
+tmp/
+figures/*.pdf
+figures/*.png
 
 # Local configuration
 .env

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ttt-write-authority"
 version = "0.1.0"
-description = "Reproducible experiments for persistent test-time updates in self-generated streams"
+description = "Reproduction code for long-horizon self-generated feedback in test-time training"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
@@ -28,9 +28,10 @@ language = [
 ]
 agents = [
   "peft>=0.13",
-  "alfworld==0.4.2",
-  "fast-downward-textworld",
-  "scienceworld==1.2.3",
+  "rank-bm25>=0.2.2",
+  "beautifulsoup4>=4.12",
+  "flask>=3.0",
+  "reportlab>=4.2",
 ]
 dev = ["pytest>=8", "ruff>=0.7"]
 

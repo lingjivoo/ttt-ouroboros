@@ -12,8 +12,8 @@ def test_all_manifests_build(monkeypatch):
     monkeypatch.setenv("TTT_CKPT", "/artifacts/checkpoints")
     monkeypatch.setenv("TTT_DATA", "/artifacts/data")
     monkeypatch.setenv("TTT_OUT", "/artifacts/results")
-    monkeypatch.setenv("ALFWORLD_DATA", "/artifacts/alfworld")
-    monkeypatch.setenv("AGENTBENCH_ROOT", "/opt/AgentBench-v0.2")
+    monkeypatch.setenv("WEBSHOP_DIR", "/opt/webshop")
+    monkeypatch.setenv("WEBSHOP_DATA", "/artifacts/webshop/catalogue.json")
     manifests = sorted((ROOT / "configs").glob("*.yaml"))
     assert manifests
     for path in manifests:
@@ -26,4 +26,8 @@ def test_all_manifests_build(monkeypatch):
 def test_result_schema_is_valid_json():
     schema = json.loads((ROOT / "schemas/result.schema.json").read_text())
     assert schema["required"] == ["status"]
-    assert set(schema["properties"]["status"]["enum"]) == {"running", "complete", "error"}
+    assert set(schema["properties"]["status"]["enum"]) == {
+        "running",
+        "passed",
+        "failed",
+    }

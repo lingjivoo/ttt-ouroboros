@@ -5,7 +5,7 @@
   "type": "object",
   "required": ["status"],
   "properties": {
-    "status": {"enum": ["running", "complete", "error"]},
+    "status": {"enum": ["running", "passed", "failed"]},
     "_config": {"type": "object"},
     "error": {"type": "string"},
     "elapsed_seconds": {"type": "number", "minimum": 0}

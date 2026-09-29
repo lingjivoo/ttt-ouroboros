@@ -2,7 +2,7 @@
 
 Every failure this catches has actually happened here: a dataset path that was
 a directory rather than a file, a checkpoint symlink whose target another user
-could not read, an environment whose ScienceWorld could not reach a JVM, a
+could not read, an environment whose agent package could not initialize, a
 job that ran for two hours and died on an import. The point is to fail in
 thirty seconds instead of two hours.
 

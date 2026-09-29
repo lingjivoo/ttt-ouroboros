@@ -1,0 +1,16 @@
+schema_version: 1
+name: webshop-qwen3-4b-settlement-seed0
+entrypoint: scripts/ws_arms.py
+environment:
+  WEBSHOP_DIR: ${WEBSHOP_DIR}
+  WEBSHOP_DATA: ${WEBSHOP_DATA}
+args:
+  policy: settlement
+  model: Qwen/Qwen3-4B
+  episodes: 900
+  eval_episodes: 150
+  settle_every: 25
+  settle_eval_episodes: 10
+  stream_seed: 0
+  eval_seed: 1234
+  out: ${TTT_OUT}/webshop/settlement_s0.json

@@ -1,4 +1,4 @@
-"""Paired analysis of the ALFWorld write-policy arms.
+"""Paired analysis of the WebShop write-policy arms.
 
 Every arm is scored on the same held-out games in the same order at every
 checkpoint, and all arms start from the identical frozen model, so two
@@ -12,7 +12,7 @@ flips say whether that is a real gain or two unrelated episodes trading places.
 
 Read the two columns separately, because they answer different questions and the
 frozen arm settles which null applies. Its discordance measures what this task
-flips from numerics alone, and in ALFWorld that is 0 -- argmax over a candidate
+flips from numerics alone, and in the audited WebShop control it is 0 -- argmax over a candidate
 set absorbs the rounding that free-form generation amplifies (the MATH probe, by
 contrast, flips 4 of 200). With a zero-noise control, ANY discordance in a writing
 arm is a real behavioural change, so the discordant count is the evidence that

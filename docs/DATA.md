@@ -21,3 +21,17 @@ artifact manifest.
 Checkpoints must be loaded with the matching preset in `ttt_pt/config.py`.
 Never infer a preset from parameter count. The 3B 8K and 128K checkpoints are
 distinct experimental objects.
+
+For Qwen3-4B experiments, retokenize immutable PG-19 streams and retain the
+resulting `manifest.json`:
+
+```bash
+python scripts/qwen_prepare_pg19.py \
+  --val "$TTT_DATA/pg19/val.npy" \
+  --source-tokenizer "$TTT_SOURCE_TOKENIZER" \
+  --qwen-tokenizer "$TTT_QWEN_MODEL" \
+  --out "$TTT_DATA/qwen_pg19"
+```
+
+WebShop expects the upstream repository in `WEBSHOP_DIR` and the deterministic
+catalogue made by `scripts/ws_build_catalogue.py` in `WEBSHOP_DATA`.

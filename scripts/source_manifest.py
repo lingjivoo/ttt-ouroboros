@@ -10,13 +10,25 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "SOURCE_MANIFEST.json"
-EXCLUDED_PARTS = {".git", "__pycache__", ".pytest_cache", ".ruff_cache"}
+EXCLUDED_PARTS = {
+    ".git",
+    "__pycache__",
+    ".pytest_cache",
+    ".ruff_cache",
+    "results",
+    "tmp",
+}
 
 
 def inventory() -> list[dict[str, object]]:
     rows = []
     for path in sorted(ROOT.rglob("*")):
-        if not path.is_file() or path == OUTPUT or EXCLUDED_PARTS.intersection(path.parts):
+        if (
+            not path.is_file()
+            or path == OUTPUT
+            or EXCLUDED_PARTS.intersection(path.parts)
+            or (path.parent.name == "figures" and path.suffix in {".pdf", ".png"})
+        ):
             continue
         data = path.read_bytes()
         rows.append(

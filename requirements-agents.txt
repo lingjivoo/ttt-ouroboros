@@ -1,5 +1,5 @@
 -r requirements.txt
 peft>=0.13
-alfworld==0.4.2
-fast-downward-textworld
-scienceworld==1.2.3
+rank-bm25>=0.2.2
+beautifulsoup4>=4.12
+flask>=3.0

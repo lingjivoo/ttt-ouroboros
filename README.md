@@ -1,118 +1,85 @@
-# Writable Memory Needs Write Authority
+# Self-Generated Feedback Destabilizes Test-Time Training
 
-Official research code for studying persistent test-time updates in long
-self-generated streams. The repository contains the TTT-E2E PyTorch runtime,
-controlled language-model experiments, Settlement variants, and the ALFWorld
-agent evaluation used by the accompanying paper.
+This is the focused reproduction repository for **“Self-Generated Feedback
+Destabilizes Test-Time Training: A Causal Decomposition of Long-Horizon
+Adaptation.”** It contains the TTT-E2E PyTorch runtime, the experiment entry
+points used by the paper, the WebShop task experiment, audited aggregate data,
+and scripts for the final figures.
 
-The release is organized around four reproducibility rules:
+Exploratory branches that do not contribute to the paper—ALFWorld,
+ScienceWorld, long-stream retrieval, entropy recovery, and hidden-provenance
+follow-ups—are intentionally excluded.
 
-1. every result is produced by a versioned YAML manifest or an explicit CLI;
-2. checkpoints and corpora are external, immutable inputs identified by hash;
-3. probes are read-only and independent evaluation text never enters updates;
-4. books or tasks, rather than repeated sampling seeds, are the statistical units.
-
-## Repository layout
+## Layout
 
 ```text
-ttt_pt/        TTT model, fast-weight state, streaming decoder, training code
-scripts/       paper experiment entry points
-configs/       versioned, inspectable experiment manifests
-analysis/      aggregation and confidence-interval scripts
-tests/         CPU unit tests
-validation/    explicit GPU/checkpoint validation programs
-cluster/       optional scheduler templates; no site credentials
-docs/          protocol, data, and reproducibility documentation
-schemas/       machine-readable result schema
+ttt_pt/      TTT model, fast-weight state, streaming decoder and training code
+scripts/     paper experiment entry points
+configs/     inspectable manifests for headline experiments
+analysis/    paired aggregation and confidence-interval utilities
+figures/     scripts that regenerate the submitted figures
+data/        audited aggregate input for the unified canonical curves
+validation/  conversion, streaming and state-restoration checks
+docs/        protocol, data and result-to-code map
 ```
 
-## Installation
+## Install and validate
 
-Python 3.11 or 3.12 is recommended. Install the PyTorch wheel matching the CUDA
-runtime first, then install this repository:
+Python 3.11 or 3.12 is recommended. Install a CUDA-matched PyTorch wheel first.
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install torch --index-url https://download.pytorch.org/whl/cu128
 pip install -e '.[language,dev]'
+make compile test selfcheck
 ```
 
-For ALFWorld experiments:
+WebShop additionally needs its upstream environment and catalogue:
 
 ```bash
-pip install -e '.[language,agents,dev]'
-alfworld-download
+pip install -e '.[agents]'
+python scripts/ws_build_catalogue.py --help
 ```
 
-Copy `.env.example` and export the paths in it. Checkpoints, PG-19 tokens,
-ALFWorld data, and generated trajectories are intentionally not committed.
+Checkpoints and tokenized PG-19 are immutable external inputs. Set their paths
+as described in `.env.example`; the runners record hashes in their output.
 
-## Validate the installation
+## Headline language experiment
 
-```bash
-make compile
-make test
-python scripts/selfcheck.py
-```
-
-The GPU invariants should pass before any long run:
-
-```bash
-python scripts/gate_canaries.py --ckpt "$TTT_CKPT/125m-ext32k.pt" \
-  --val "$TTT_DATA/pg19/val.npy"
-python scripts/state_probe_audit.py --ckpt "$TTT_CKPT/125m-ext32k.pt" \
-  --val "$TTT_DATA/pg19/val.npy"
-python scripts/stream_parity.py --ckpt "$TTT_CKPT/125m-ext32k.pt" \
-  --val "$TTT_DATA/pg19/val.npy"
-```
-
-## Reproduce the canonical experiment
-
-Inspect a manifest before running it:
-
-```bash
-python scripts/run_config.py configs/canonical_closed.yaml --dry-run
-python scripts/run_config.py configs/canonical_masked.yaml --dry-run
-```
-
-Then run the two arms:
+The canonical paper comparison uses PG-19 canonical books 2–7, five seeds,
+128 chunks, temperature 1 and top-p .95:
 
 ```bash
 python scripts/run_config.py configs/canonical_closed.yaml
-python scripts/run_config.py configs/canonical_masked.yaml
+python scripts/run_config.py configs/canonical_writes_off.yaml
 ```
 
-The canonical protocol uses 8 books, 5 sampling seeds, 128 chunks, eight real
-prefill writes, branch-only clean probes, temperature 1, and top-p 0.95. See
-[`docs/EXPERIMENTS.md`](docs/EXPERIMENTS.md) for all protocol definitions.
+## Reproduction map
 
-## Main experiment entry points
+[`docs/PAPER_REPRODUCTION.md`](docs/PAPER_REPRODUCTION.md) maps every main-paper
+and appendix result to its runner, protocol and analysis path. Read it before
+combining outputs: exposure-density and Settlement use separate long-book
+suites and must not be pooled with the canonical six-book suite.
 
-| Question | Entry point |
-|---|---|
-| Closed loop vs writes off and fixed generation | `scripts/horizon.py` |
-| Per-write prospective transfer | `scripts/preq_obs.py` |
-| Decoder and causal mechanism controls | `scripts/mechanism_pilot.py` |
-| Real-text exposure-density boundary | `scripts/exposure_density_sweep.py` |
-| Damage–adaptation update-strength frontier | `scripts/update_strength_sweep.py` |
-| Mixed-source Settlement | `scripts/settlement_mixed.py` |
-| Independent-source heavy tail | `scripts/acceptance_heavy_tail.py` |
-| Hidden-provenance benchmark | `scripts/acceptance_hidden_provenance.py` |
-| Long-stream retrieval | `scripts/acceptance_retrieval_3b.py` |
-| ALFWorld online/prequential evaluation | `scripts/alfworld_agentbench.py` |
-| WebShop agent policies | `scripts/ws_arms.py` |
-| ScienceWorld agent policies | `scripts/sw_arms.py` |
+## Figures
+
+The submitted canonical, exposure, causal-control, heavy-tail and breadth
+figures are regenerated by:
+
+```bash
+python figures/make_paper_figures.py
+python figures/make_commitment_policies.py
+python figures/make_provenance_noise.py
+python figures/make_agent_causal_success.py
+```
+
+Some panels intentionally use audited aggregate values printed in their source;
+the code comments name the originating table and statistical unit.
 
 ## Artifact policy
 
-Raw model weights and corpora are too large and may have upstream licenses, so
-this repository publishes their required names, hashes, selection rules, and
-schemas rather than redistributing them. A run is comparable only when its
-checkpoint hash, corpus identity, book selection, probe schedule, decoder, and
-result schema agree. Do not merge outputs based only on filenames.
-
-## Citation and license
-
-Citation metadata is in `CITATION.cff`. Code is released under the MIT License.
-Dataset and checkpoint licenses remain those of their original providers.
+Raw checkpoints, PG-19 and WebShop data are not redistributed because of size
+and upstream licensing. A result is comparable only when checkpoint digest,
+book identities, seed set, horizon, probe schedule and decoder agree. Code is
+MIT licensed; data and model licenses remain with their providers.

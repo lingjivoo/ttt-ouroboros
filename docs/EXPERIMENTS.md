@@ -2,40 +2,41 @@
 
 ## Canonical language protocol
 
-- Model: 125M TTT-E2E, 32K-extended checkpoint.
-- Independent units: eight audited PG-19 books.
-- Sampling seeds: 42, 1, 7, 2, 3.
-- Stream: eight real prefill writes followed by generated chunks to 128K.
-- Decoder: temperature 1, top-p 0.95 unless the decoder is the intervention.
-- Probes: branch-only clean text; probe tokens do not enter cache or weights.
-- Primary contrast: anchored first-to-last change in Closed minus Masked.
+- TTT-E2E 125M, 760M or 3B with the matching checkpoint preset.
+- Canonical PG-19 books 2–7; books, not seeds, are independent units.
+- Seeds 42, 1, 7, 2 and 3; 128 chunks; logical width 8.
+- Eight real prefill writes, then generated chunks.
+- Temperature 1 and top-p .95 unless the decoder is the intervention.
+- Branch-only probes snapshot and restore the complete carried state.
+- `closed` retains generated writes; `masked`/Writes Off drops them; `open`
+  uses frozen-W0 generation while the receiver continues to update.
 
 ## Exposure density
 
-Use the same model, book identities, horizon, decoder, and probe definition.
-Vary the fraction of real-text write slots and the arrangement (`even` or
-`bursty`). The manifest `configs/exposure_density.yaml` shows one cell; a full
-sweep changes only fraction, arrangement, and seed.
+This is a separate eight-long-book suite. Vary real-text write fraction over
+0%, 5%, 10%, 20% and 31%; at 31%, compare even and burst schedules with the
+same real-token budget. Report within-suite anchored harm and do not compare
+its absolute 0% value with the canonical six-book endpoint.
 
-## Update strength
+## Update strength and content controls
 
-Scale the already clipped parameter delta. Scaling gradients before Adam is not
-a valid dose intervention because Adam largely cancels uniform gradient scale.
-Report generated-stream harm, identical-real-stream benefit, realized update
-norm, clipping frequency, diversity, repetition, and onset.
+`update_strength_sweep.py` scales the already clipped parameter delta. The
+aTTT, random-dose and uniform-dose arms match write mass per row/chunk.
+Anchor-content arms match slot count and distinguish skipped slots, read-only
+self text, random tokens, shuffled real text, frozen-W0 text and real text.
 
 ## Settlement
 
-A proposal is held outside the committed generation state. The next independent
-validation evidence compares the current and candidate states; only accepted
-proposals become persistent. Validation text and final evaluation text must be
-disjoint. Report admission counts and pending proposals in addition to endpoint
-loss.
+A proposal remains outside the committed generation state. The next independent
+validation evidence compares current and candidate states; only an improvement
+commits. Validation and final evaluation text are disjoint. Report accepted,
+rejected and pending proposals. Settlement uses a scale-specific long-book suite
+and its endpoint gap must not be described as canonical H.
 
-## ALFWorld online/prequential protocol
+## WebShop
 
-The adapter remains active in both seen and unseen evaluation. Each task is
-observed, acted on, optionally written, and then the stream advances. The hard
-pilot excludes task type 1 and uses task types 2–6 with a 50-step limit. Pair
-policies on the same task order and seeds. Report exact task-level wins and
-losses; one stream is not five independent seeds.
+Qwen3-4B is frozen except rank-16 LoRA on `down_proj` in the final quarter of
+layers. A written episode takes two Adam steps at 1e-5 over at most 16
+action pairs. Each seed processes 900 training episodes and is evaluated on the
+same 150 held-out goals. Settlement checks one 25-episode candidate on 10
+disjoint validation goals. Run five paired stream seeds.
