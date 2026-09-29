@@ -3,9 +3,14 @@
 ## Canonical language protocol
 
 - TTT-E2E 125M, 760M or 3B with the matching checkpoint preset.
-- Canonical PG-19 books 2–7; books, not seeds, are independent units.
-- Seeds 42, 1, 7, 2 and 3; 128 chunks; logical width 8.
+- Run physical rows/books 0–7 to preserve logical width 8, then report the
+  screened canonical books 2–7. Books, not seeds, are independent units.
+- Seeds 42, 1, 7, 2 and 3; 128 chunks; 16 branch-only probes including the
+  prefill-end reference.
 - Eight real prefill writes, then generated chunks.
+- The prefill-end reference and first scheduled trajectory probe reuse the same
+  read-only clean passage; this preserves the audited 25,601-token selection
+  threshold and isolates state change from probe-text change.
 - Temperature 1 and top-p .95 unless the decoder is the intervention.
 - Branch-only probes snapshot and restore the complete carried state.
 - `closed` retains generated writes; `masked`/Writes Off drops them; `open`

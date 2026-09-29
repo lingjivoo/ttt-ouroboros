@@ -10,21 +10,25 @@ Do not pool rows across these families.
 
 | Suite | Statistical unit | Books/tasks | Seeds | Primary runner |
 |---|---|---:|---:|---|
-| Canonical TTT-E2E | PG-19 book | canonical books 2–7 | 42, 1, 7, 2, 3 | `scripts/horizon.py` |
+| Canonical TTT-E2E | PG-19 book | run rows 0–7; report books 2–7 | 42, 1, 7, 2, 3 | `scripts/horizon.py` |
 | Exposure density | long PG-19 book | 8 fixed long books | 5 | `scripts/exposure_density_sweep.py` |
 | Single update | PG-19 book/state pair | 8 books, positions 1/33/65/97 | paired | `scripts/preq_obs.py` |
 | Settlement | long PG-19 book | scale-specific long-book sets | paired | `scripts/deferred.py` |
 | WebShop | held-out goal, paired within seed | 900 train / 150 test goals | 5 | `scripts/ws_arms.py` |
 
 Canonical TTT-E2E uses 128 chunks of 1024 tokens, eight real prefill writes,
-temperature 1, top-p .95, branch-only clean probes and logical width 8 where
-supported. The released canonical manifests use the screened six-book set.
+temperature 1, top-p .95, 16 branch-only clean probes and logical width 8. The
+released manifests run eight physical rows and the analysis selects the six
+screened books; this preserves width-dependent CUDA numerics.
+The prefill-end baseline does not advance the real-text cursor: it and the first
+scheduled probe score the same passage, matching the audited 25,601-token book
+selection threshold.
 
 ## Main paper
 
 | Paper item | Code or frozen input | Reproduction note |
 |---|---|---|
-| Table 1, scale comparison | `scripts/horizon.py` | Run `closed` and `masked` with the matching 125M/760M/3B preset and checkpoint. The supplied manifests cover 125M. |
+| Table 1, scale comparison | `scripts/horizon.py` | Run the released 125M/760M/3B suites; all preserve width 8, the common books, seeds and probe schedule. |
 | Figure 1a, canonical trajectory | `data/unified_perbook_data.json`, `figures/make_paper_figures.py` | Audited 6 books × 5 seeds × 16 probes; endpoint estimator matches Table 1. |
 | Figure 1b, exposure boundary | `scripts/exposure_density_sweep.py`, `analysis/analyze_exposure_density.py`, `figures/make_paper_figures.py` | Separate eight-long-book suite. The panel is normalized to its own 0% result. |
 | Table 2, Qwen real-text utility | `scripts/qwen_reviewer_p0c.py` | Updates the last four `down_proj` matrices with clipped Adam. |
@@ -65,8 +69,8 @@ python scripts/run_config.py configs/canonical_writes_off.yaml
 python scripts/run_config.py configs/canonical_fixed_generation.yaml
 ```
 
-For 760M and 3B, copy the manifest and change only `ckpt` and `preset`; preserve
-books, seeds, horizon and decoder. Never infer the preset from a filename.
+For 760M and 3B use `configs/suites/main_760m.yaml` and
+`configs/suites/main_3b.yaml`. Never infer a preset from a filename.
 
 ## Exposure sweep
 

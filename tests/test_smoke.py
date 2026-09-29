@@ -3,11 +3,13 @@
 Run: python -m tests.test_smoke  (CPU-friendly)
 """
 
-import torch
+import pytest
 
-from ttt_pt.config import Config, InnerOptConfig, ModelConfig, TrainingConfig
-from ttt_pt.meta import compute_loss, ilr_multiplier
-from ttt_pt.model import TTTModel
+torch = pytest.importorskip("torch")
+
+from ttt_pt.config import Config, InnerOptConfig, ModelConfig, TrainingConfig  # noqa: E402
+from ttt_pt.meta import compute_loss, ilr_multiplier  # noqa: E402
+from ttt_pt.model import TTTModel  # noqa: E402
 
 
 def tiny_cfg(seq_len=64, chunk=16, window=32):

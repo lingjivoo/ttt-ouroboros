@@ -1,0 +1,6 @@
+schema_version: 1
+name: paper-main-3b
+runs:
+  - ../canonical_3b_writes_off.yaml
+  - ../canonical_3b_closed.yaml
+  - ../canonical_3b_fixed_generation.yaml

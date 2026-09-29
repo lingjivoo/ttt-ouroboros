@@ -1,0 +1,6 @@
+schema_version: 1
+name: paper-main-760m
+runs:
+  - ../canonical_760m_writes_off.yaml
+  - ../canonical_760m_closed.yaml
+  - ../canonical_760m_fixed_generation.yaml

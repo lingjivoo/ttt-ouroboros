@@ -1,16 +1,16 @@
 schema_version: 1
-name: canonical-125m-fixed-generation
+name: canonical-760m-writes-off
 entrypoint: scripts/horizon.py
 args:
-  ckpt: ${TTT_CKPT}/125m-ext32k.pt
+  ckpt: ${TTT_CKPT}/760m-ext32k.pt
   val: ${TTT_DATA}/pg19/val.npy
-  preset: 125m-e2e-ext32k
-  mode: open
+  preset: 760m-e2e-ext32k
+  mode: masked
   n_chunks: 128
   n_seqs: 8
   seeds: 42,1,7,2,3
   book_offset: 0
   initial_probe: true
-  out: ${TTT_OUT}/canonical/fixed_generation.json
+  out: ${TTT_OUT}/canonical_760m/writes_off.json
 analysis:
   report_book_indices: [2, 3, 4, 5, 6, 7]

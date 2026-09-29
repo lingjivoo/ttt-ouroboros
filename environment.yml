@@ -1,0 +1,27 @@
+name: ttt-feedback
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pytorch>=2.5,<3
+  - pytorch-cuda=12.4
+  - numpy>=2.0,<3
+  - scipy>=1.13,<2
+  - pyyaml>=6,<7
+  - pip>=24
+  - pip:
+      - einops>=0.8,<1
+      - transformers>=4.51,<5
+      - accelerate>=1,<2
+      - datasets>=3,<5
+      - sentencepiece>=0.2,<1
+      - matplotlib>=3.9,<4
+      - peft>=0.13,<1
+      - rank-bm25>=0.2.2,<1
+      - beautifulsoup4>=4.12,<5
+      - flask>=3,<4
+      - reportlab>=4.2,<5
+      - pytest>=8,<10
+      - ruff>=0.7,<1

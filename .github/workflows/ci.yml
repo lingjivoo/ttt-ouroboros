@@ -11,6 +11,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: pip
       - name: Install CPU dependencies
         run: |
           python -m pip install --upgrade pip
@@ -19,4 +20,10 @@ jobs:
       - run: make compile
       - run: make test
       - run: make lint
+      - name: Validate manifests
+        env:
+          TTT_CKPT: /artifacts/checkpoints
+          TTT_DATA: /artifacts/data
+          TTT_OUT: /tmp/ttt-results
+        run: make suite-dry-run
       - run: python scripts/source_manifest.py --check

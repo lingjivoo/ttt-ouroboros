@@ -7,7 +7,10 @@ args:
   preset: 125m-e2e-ext32k
   mode: masked
   n_chunks: 128
-  n_seqs: 6
+  n_seqs: 8
   seeds: 42,1,7,2,3
-  book_offset: 2
+  book_offset: 0
+  initial_probe: true
   out: ${TTT_OUT}/canonical/writes_off.json
+analysis:
+  report_book_indices: [2, 3, 4, 5, 6, 7]

@@ -4,11 +4,13 @@ naive (full-graph) implementation on a tiny model.
 Run: python -m tests.test_remat
 """
 
-import torch
+import pytest
 
-from tests.test_smoke import tiny_cfg
-from ttt_pt.meta import compute_loss
-from ttt_pt.model import TTTModel
+torch = pytest.importorskip("torch")
+
+from tests.test_smoke import tiny_cfg  # noqa: E402
+from ttt_pt.meta import compute_loss  # noqa: E402
+from ttt_pt.model import TTTModel  # noqa: E402
 
 
 def grads_snapshot(model):

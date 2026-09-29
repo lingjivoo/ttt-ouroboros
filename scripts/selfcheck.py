@@ -1,172 +1,113 @@
-"""Check that this environment can run the experiments, before one is queued.
+#!/usr/bin/env python3
+"""Fail fast on missing packages, artifacts, CUDA, or checkpoint incompatibility."""
 
-Every failure this catches has actually happened here: a dataset path that was
-a directory rather than a file, a checkpoint symlink whose target another user
-could not read, an environment whose agent package could not initialize, a
-job that ran for two hours and died on an import. The point is to fail in
-thirty seconds instead of two hours.
+from __future__ import annotations
 
-    python scripts/selfcheck.py          # no GPU needed, ~10 seconds
-    python scripts/selfcheck.py --full   # adds GPU, checkpoint load, one chunk
-
-Exit status is the number of failures, so a job script can gate on it.
-"""
 import argparse
 import importlib
 import os
 import sys
-import traceback
+from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[1]
 OK, BAD, WARN = "  ok  ", " FAIL ", " warn "
-fails = []
-warns = []
 
 
-def check(name, fn, fatal=True):
-    try:
-        detail = fn()
-        print(f"[{OK}] {name}" + (f"  -- {detail}" if detail else ""))
-        return True
-    except Exception as e:
-        tag = BAD if fatal else WARN
-        print(f"[{tag}] {name}\n         {type(e).__name__}: {e}")
-        (fails if fatal else warns).append(name)
-        return False
+def readable(path: Path, label: str) -> str:
+    if not path.is_file():
+        raise FileNotFoundError(f"{label}: {path}")
+    with path.open("rb") as handle:
+        handle.read(1)
+    return f"{path} ({path.stat().st_size / 2**30:.2f} GiB)"
 
 
-def env_paths():
-    root = os.environ.get("TTT_ROOT")
-    if not root:
-        raise RuntimeError("TTT_ROOT is not set -- run `source env.sh` first")
-    missing = [k for k in ("TTT_DATA", "TTT_CKPT", "TTT_OUT") if not os.environ.get(k)]
-    if missing:
-        raise RuntimeError(f"unset: {', '.join(missing)} -- run `source env.sh`")
-    return root
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--profile", choices=("language", "webshop", "all"), default="language")
+    parser.add_argument("--full", action="store_true", help="load 125M and run one CUDA chunk")
+    parser.add_argument("--ckpt", type=Path)
+    parser.add_argument("--val", type=Path)
+    args = parser.parse_args()
 
+    failures: list[str] = []
+    warnings: list[str] = []
 
-def readable(path, what):
-    """Readability, not existence. A symlink to a file another user owns
-    resolves fine and then fails on open, which is the failure that wastes a
-    queue slot rather than a second."""
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"{what}: {path} (symlink target missing?)")
-    with open(path, "rb") as f:
-        f.read(1)
-    return f"{os.path.getsize(path) / 2**30:.1f} GB" if os.path.isfile(path) else "dir"
+    def check(name, fn, fatal=True):
+        try:
+            detail = fn()
+            print(f"[{OK}] {name}" + (f" -- {detail}" if detail else ""))
+            return True
+        except Exception as exc:
+            print(f"[{BAD if fatal else WARN}] {name} -- {type(exc).__name__}: {exc}")
+            (failures if fatal else warnings).append(name)
+            return False
 
+    check("Python 3.11+", lambda: sys.version.split()[0] if sys.version_info >= (3, 11)
+          else (_ for _ in ()).throw(RuntimeError(sys.version.split()[0])))
+    modules = ["numpy", "yaml", "torch", "einops", "ttt_pt.model", "ttt_pt.stream"]
+    if args.profile in ("webshop", "all"):
+        modules += ["transformers", "peft", "rank_bm25", "bs4", "flask"]
+    for module in modules:
+        check(f"import {module}", lambda name=module: getattr(importlib.import_module(name), "__version__", "ok"))
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--full", action="store_true",
-                    help="also touch the GPU, load a checkpoint and run one chunk")
-    args = ap.parse_args()
+    data_root = Path(os.environ.get("TTT_DATA", "")) if os.environ.get("TTT_DATA") else None
+    ckpt_root = Path(os.environ.get("TTT_CKPT", "")) if os.environ.get("TTT_CKPT") else None
+    val = args.val or (data_root / "pg19/val.npy" if data_root else None)
+    ckpt = args.ckpt or (ckpt_root / "125m-ext32k.pt" if ckpt_root else None)
+    if args.profile in ("language", "all"):
+        check("PG-19 validation array", lambda: readable(val, "validation data") if val else (_ for _ in ()).throw(RuntimeError("set TTT_DATA or --val")))
+        check("125M checkpoint", lambda: readable(ckpt, "checkpoint") if ckpt else (_ for _ in ()).throw(RuntimeError("set TTT_CKPT or --ckpt")))
+    out = Path(os.environ.get("TTT_OUT", ROOT / "results"))
 
-    print("=" * 66)
-    print("environment")
-    print("=" * 66)
-    check("TTT_* variables set", env_paths)
-    check("python >= 3.10", lambda: (
-        f"{sys.version_info.major}.{sys.version_info.minor}"
-        if sys.version_info >= (3, 10) else (_ for _ in ()).throw(
-            RuntimeError(f"python {sys.version.split()[0]} is too old"))))
+    def writable():
+        out.mkdir(parents=True, exist_ok=True)
+        marker = out / ".selfcheck"
+        marker.write_text("ok\n")
+        marker.unlink()
+        return str(out)
 
-    print()
-    print("=" * 66)
-    print("imports")
-    print("=" * 66)
-    for mod, fatal in [("torch", True), ("numpy", True), ("transformers", True),
-                       ("peft", True), ("ttt_pt.model", True), ("ttt_pt.stream", True),
-                       ("alfworld", False), ("scienceworld", False)]:
-        check(f"import {mod}", lambda m=mod: getattr(
-            importlib.import_module(m), "__version__", "ok"), fatal=fatal)
+    check("output directory writable", writable)
 
-    print()
-    print("=" * 66)
-    print("data and checkpoints (readable, not merely present)")
-    print("=" * 66)
-    data = os.environ.get("TTT_DATA", "")
-    ckpt = os.environ.get("TTT_CKPT", "")
-    check("pg19 val split", lambda: readable(os.path.join(data, "pg19/val.npy"), "dataset"))
-    check("pg19 train split", lambda: readable(os.path.join(data, "pg19/train.npy"), "dataset"), fatal=False)
-    check("125M extended checkpoint",
-          lambda: readable(os.path.join(ckpt, "125m-ext32k.pt"), "checkpoint"))
-    check("recorded degenerate stream (replay control)",
-          lambda: readable(os.path.join(ckpt, "replay_traj_s42.pt"), "checkpoint"), fatal=False)
+    if args.profile in ("webshop", "all"):
+        def webshop_root():
+            path = Path(os.environ["WEBSHOP_DIR"]).resolve()
+            if not path.is_dir():
+                raise FileNotFoundError(path)
+            return str(path)
 
-    def writable_out():
-        out = os.environ["TTT_OUT"]
-        os.makedirs(out, exist_ok=True)
-        p = os.path.join(out, ".selfcheck")
-        open(p, "w").write("x")
-        os.remove(p)
-        return out
-    check("TTT_OUT is writable", writable_out)
+        check("WEBSHOP_DIR", webshop_root)
+        check("WEBSHOP_DATA", lambda: readable(Path(os.environ["WEBSHOP_DATA"]), "catalogue"))
 
-    if args.full:
-        print()
-        print("=" * 66)
-        print("gpu and a real forward pass")
-        print("=" * 66)
+    if args.full and not failures:
         import numpy as np
         import torch
 
-        def gpu():
-            if not torch.cuda.is_available():
-                raise RuntimeError("no CUDA device visible -- are you on a compute node?")
-            return f"{torch.cuda.get_device_name(0)}, {torch.cuda.device_count()} visible"
-        if check("CUDA device", gpu):
-            def bf16_gemm():
-                a = torch.randn(512, 512, device="cuda", dtype=torch.bfloat16)
-                (a @ a).sum().item()
-                return "bf16 matmul ok"
-            # This has failed cluster-side before with CUBLAS_STATUS_INVALID_VALUE
-            # on some partitions; catching it here identifies the node rather
-            # than a code change.
-            check("bf16 matmul on device", bf16_gemm)
+        check("CUDA visible", lambda: torch.cuda.get_device_name(0) if torch.cuda.is_available()
+              else (_ for _ in ()).throw(RuntimeError("no CUDA device")))
 
-            def load_and_step():
-                from ttt_pt.config import PRESETS
-                from ttt_pt.model import TTTModel
-                from ttt_pt.stream import StreamState
-                cfg = PRESETS["125m-e2e-ext32k"]()
-                model = TTTModel(cfg.model, max_seq_len=2 * cfg.model.mini_batch_size).cuda()
-                st = torch.load(os.path.join(ckpt, "125m-ext32k.pt"),
-                                map_location="cuda", weights_only=False)
-                model.load_state_dict(st.get("model", st), strict=False)
-                model.eval()
-                tok = np.asarray(np.load(os.path.join(data, "pg19/val.npy"), mmap_mode="r"))
-                CS = cfg.model.mini_batch_size
-                seg = torch.from_numpy(tok[:CS + 1].astype("int64"))[None].cuda()
-                stream = StreamState(model, 1, "cuda")
-                nll = stream.process_real_chunk(seg[:, :-1], seg[:, 1:], 1.0, 1.0, cfg)
-                v = float(nll.mean())
-                if not (0.5 < v < 20):
-                    raise RuntimeError(f"chunk NLL {v:.3f} is implausible; wrong checkpoint or corpus?")
-                return f"one 1024-token chunk, NLL {v:.3f}"
-            if not check("load checkpoint and run one chunk", load_and_step):
-                print()
-                print("         NOTE: a CUBLAS failure here is usually the cluster,")
-                print("         not your environment. It has been observed")
-                print("         intermittently on freecycle-h100 (nodes h100-2 and")
-                print("         h100-3) while a plain bf16 matmul on the same device")
-                print("         passed, and with two different virtualenvs whose CUDA")
-                print("         libraries are byte-identical. Jobs that ran minutes")
-                print("         earlier on the same partition succeeded. Resubmit;")
-                print("         if it follows you across several nodes, then suspect")
-                print("         the environment.")
+        def one_chunk():
+            from ttt_pt.config import PRESETS
+            from ttt_pt.model import TTTModel
+            from ttt_pt.stream import StreamState
 
-    print()
-    print("=" * 66)
-    if fails:
-        print(f"{len(fails)} FAILED: {', '.join(fails)}")
-        print("Fix these before queueing anything; every one of them would")
-        print("otherwise surface after the job reaches a GPU.")
-    else:
-        print("all required checks passed" + (
-            f" ({len(warns)} optional missing: {', '.join(warns)})" if warns else ""))
-    print("=" * 66)
-    return len(fails)
+            cfg = PRESETS["125m-e2e-ext32k"]()
+            model = TTTModel(cfg.model, max_seq_len=2 * cfg.model.mini_batch_size).cuda().eval()
+            state = torch.load(ckpt, map_location="cuda", weights_only=False)
+            model.load_state_dict(state.get("model", state), strict=False)
+            tokens = np.load(val, mmap_mode="r")
+            size = cfg.model.mini_batch_size
+            sequence = torch.from_numpy(np.asarray(tokens[: size + 1], dtype=np.int64))[None].cuda()
+            stream = StreamState(model, 1, "cuda")
+            nll = float(stream.process_real_chunk(sequence[:, :-1], sequence[:, 1:], 1.0, 1.0, cfg).mean())
+            if not 0.5 < nll < 20:
+                raise RuntimeError(f"implausible NLL {nll:.4f}")
+            return f"NLL={nll:.4f}"
+
+        check("load checkpoint and process one chunk", one_chunk)
+
+    print(f"\n{len(failures)} failures; {len(warnings)} warnings")
+    return 1 if failures else 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

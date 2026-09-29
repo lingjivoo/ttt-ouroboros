@@ -1,0 +1,16 @@
+.git
+.github
+__pycache__
+*.py[cod]
+.pytest_cache
+.ruff_cache
+.venv
+results/*
+!results/.gitkeep
+*.pt
+*.pth
+*.ckpt
+*.npy
+*.npz
+tmp
+.DS_Store

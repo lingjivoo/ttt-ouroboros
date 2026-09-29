@@ -15,6 +15,8 @@ EXCLUDED_PARTS = {
     "__pycache__",
     ".pytest_cache",
     ".ruff_cache",
+    "build",
+    "dist",
     "results",
     "tmp",
 }
@@ -27,6 +29,7 @@ def inventory() -> list[dict[str, object]]:
             not path.is_file()
             or path == OUTPUT
             or EXCLUDED_PARTS.intersection(path.parts)
+            or any(part.endswith(".egg-info") for part in path.parts)
             or (path.parent.name == "figures" and path.suffix in {".pdf", ".png"})
         ):
             continue

@@ -23,8 +23,10 @@ Per probe we also log fast-weight drift ||W_t - W_0|| / ||W_0||.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -36,6 +38,29 @@ from ttt_pt.stream import StreamState
 BOS = 128000
 CS = 1024
 WARMUP = 8
+
+
+def artifact_sha256(path):
+    """Use a trusted sidecar when present; otherwise hash the immutable input."""
+    sidecar = Path(str(path) + ".sha256")
+    if sidecar.is_file():
+        value = sidecar.read_text().strip().split()[0]
+        if len(value) == 64:
+            return value
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for block in iter(lambda: handle.read(16 << 20), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def save_json(path, payload):
+    """Atomically replace a resumable result file."""
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.with_suffix(target.suffix + ".tmp")
+    temporary.write_text(json.dumps(payload, indent=1) + "\n")
+    os.replace(temporary, target)
 
 
 def find_books(tokens, min_len):
@@ -69,7 +94,7 @@ def probe_branched(st, seg_in, seg_tgt, cfg, branched=True):
 
 def run(model, cfg, device, real, mode, n_chunks, w, lam, seed, branched=True,
         record=None, replay=None, cut_at=-1, grad_at_init=False, real_w=1.0,
-        drift_cap=0.0, ref_every=0, sampling_device="cpu"):
+        drift_cap=0.0, ref_every=0, sampling_device="cpu", initial_probe=False):
     """Single-adapter modes: closed | open | masked | real.
 
     cut_at >= 0 stops writing generated text from that chunk onward while
@@ -94,14 +119,26 @@ def run(model, cfg, device, real, mode, n_chunks, w, lam, seed, branched=True,
             seg_tgt = real[:, real_pos + 1: real_pos + CS + 1].to(device)
             if is_probe:
                 nll = probe_branched(st, seg_in, seg_tgt, cfg, branched)
-                probes.append((c, float(nll.mean())))
-                probes_book.append((c, [float(x) for x in nll]))
-                drifts.append((c, round(drift(st), 5)))
+                position = c + 1 if initial_probe else c
+                probes.append((position, float(nll.mean())))
+                probes_book.append((position, [float(x) for x in nll]))
+                drifts.append((position, round(drift(st), 5)))
             else:
                 st.process_real_chunk(seg_in, seg_tgt, real_w, 1.0, cfg, lam=lam,
                                       grad_at_init=grad_at_init,
                                       drift_cap=drift_cap)
             real_pos += CS
+            if initial_probe and c == WARMUP - 1:
+                # This is a read-only baseline on the same clean passage used
+                # by the first scheduled trajectory probe. Do not advance
+                # real_pos: matching the audited runner here keeps the book
+                # eligibility threshold at 25,601 tokens for n_chunks=128.
+                probe_in = real[:, real_pos: real_pos + CS].to(device)
+                probe_tgt = real[:, real_pos + 1: real_pos + CS + 1].to(device)
+                nll = probe_branched(st, probe_in, probe_tgt, cfg, branched)
+                probes.append((c + 1, float(nll.mean())))
+                probes_book.append((c + 1, [float(x) for x in nll]))
+                drifts.append((c + 1, round(drift(st), 5)))
         elif mode == "replay":
             # tokens recorded from an INDEPENDENT closed-loop run: identical text
             # and identical quality trajectory, but no causal path from this
@@ -310,6 +347,9 @@ def main():
     ap.add_argument("--record-to", default="",
                     help="save this run's generated chunks for later replay")
     ap.add_argument("--gpu-sampling", action="store_true")
+    ap.add_argument("--initial-probe", action="store_true",
+                    help="record a branch-only reference immediately after the "
+                         "eight real prefill chunks")
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
 
@@ -326,9 +366,12 @@ def main():
     need = n_real * CS + 1
     books = find_books(tokens, need)
     print(f"{len(books)} books with >= {need} tokens", flush=True)
+    selected_books = books[args.book_offset: args.book_offset + args.n_seqs]
+    if len(selected_books) != args.n_seqs:
+        raise ValueError(f"requested {args.n_seqs} books, found {len(selected_books)}")
     real = torch.from_numpy(np.stack(
         [tokens[s: s + need].astype(np.int64)
-         for s, _ in books[args.book_offset: args.book_offset + args.n_seqs]]))
+         for s, _ in selected_books]))
 
     # Per-seed resume, guarded by a config signature. This script previously
     # started from an empty dict and overwrote args.out, so a freecycle
@@ -344,6 +387,15 @@ def main():
            "real_w": args.real_w, "drift_cap": args.drift_cap,
            "ref_every": args.ref_every, "leaky_probe": bool(args.leaky_probe),
            "sampling_device": "cuda" if args.gpu_sampling else "cpu",
+           "initial_probe": bool(args.initial_probe),
+           "book_indices": list(range(args.book_offset,
+                                      args.book_offset + args.n_seqs)),
+           "book_bounds": [[int(start), int(end)] for start, end in selected_books],
+           "checkpoint_sha256": artifact_sha256(args.ckpt),
+           "validation_sha256": artifact_sha256(args.val),
+           "code_sha256": artifact_sha256(__file__),
+           "torch_version": torch.__version__,
+           "cuda_device": torch.cuda.get_device_name(0),
            "fields": "probes_book"}
     results = {}
     if os.path.exists(args.out):
@@ -352,6 +404,8 @@ def main():
         except Exception:
             results = {}
         old_sig = results.pop("_config", None) if isinstance(results, dict) else None
+        if isinstance(results, dict):
+            results.pop("status", None)
         if results and old_sig != sig:
             why = ("written under a different config" if old_sig is not None
                    else "written before configs were signed")
@@ -384,8 +438,7 @@ def main():
                   f"{[a for _, a in r['amp']]}", flush=True)
             print(f"  first divergent generated chunk: "
                   f"{r['first_divergent_chunk']}", flush=True)
-            with open(args.out, "w") as f:
-                json.dump(dict(results, _config=sig), f, indent=1)
+            save_json(args.out, dict(results, _config=sig, status="running"))
             continue
         if args.mode == "crossed":
             probes, gens, drifts, pbook = run_crossed(model, cfg, device, real,
@@ -398,15 +451,17 @@ def main():
                                        real_w=args.real_w,
                                        drift_cap=args.drift_cap,
                                        ref_every=args.ref_every,
-                                       sampling_device="cuda" if args.gpu_sampling else "cpu")
+                                       sampling_device="cuda" if args.gpu_sampling else "cpu",
+                                       initial_probe=args.initial_probe)
             if rec is not None:
                 torch.save(rec, f"{args.record_to}_s{sd}.pt")
         results[key] = {"probes": probes, "gen": gens, "drift": drifts,
                         "probes_book": pbook}
         print(f"{key}: probes {[round(p,3) for _,p in probes]}", flush=True)
         print(f"  drift {[d for _,d in drifts]}", flush=True)
-        with open(args.out, "w") as f:
-            json.dump(dict(results, _config=sig), f, indent=1)
+        save_json(args.out, dict(results, _config=sig, status="running"))
+
+    save_json(args.out, dict(results, _config=sig, status="passed"))
     print("saved", args.out)
 
 

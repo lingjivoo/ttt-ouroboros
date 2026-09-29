@@ -1,0 +1,6 @@
+schema_version: 1
+name: paper-main-125m
+runs:
+  - ../canonical_writes_off.yaml
+  - ../canonical_closed.yaml
+  - ../canonical_fixed_generation.yaml

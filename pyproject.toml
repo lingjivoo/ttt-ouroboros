@@ -11,29 +11,29 @@ requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [{name = "Anonymous Authors"}]
 dependencies = [
-  "numpy>=2.0",
-  "einops>=0.8",
-  "PyYAML>=6.0",
+  "numpy>=2.0,<3",
+  "einops>=0.8,<1",
+  "PyYAML>=6.0,<7",
 ]
 
 [project.optional-dependencies]
 language = [
-  "torch>=2.5",
-  "transformers>=4.45",
-  "accelerate>=1.0",
-  "datasets>=3.0",
-  "sentencepiece>=0.2",
-  "scipy>=1.13",
-  "matplotlib>=3.9",
+  "torch>=2.5,<3",
+  "transformers>=4.51,<5",
+  "accelerate>=1.0,<2",
+  "datasets>=3.0,<5",
+  "sentencepiece>=0.2,<1",
+  "scipy>=1.13,<2",
+  "matplotlib>=3.9,<4",
+  "reportlab>=4.2,<5",
 ]
 agents = [
-  "peft>=0.13",
-  "rank-bm25>=0.2.2",
-  "beautifulsoup4>=4.12",
-  "flask>=3.0",
-  "reportlab>=4.2",
+  "peft>=0.13,<1",
+  "rank-bm25>=0.2.2,<1",
+  "beautifulsoup4>=4.12,<5",
+  "flask>=3.0,<4",
 ]
-dev = ["pytest>=8", "ruff>=0.7"]
+dev = ["pytest>=8,<10", "ruff>=0.7,<1"]
 
 [tool.setuptools.packages.find]
 include = ["ttt_pt*"]
@@ -45,7 +45,7 @@ addopts = "-ra"
 [tool.ruff]
 target-version = "py311"
 line-length = 100
-exclude = ["scripts"]
+exclude = ["scripts", "analysis", "figures"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
