@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: "Self-Generated Feedback Destabilizes Test-Time Training"
+title: "TTT Ouroboros: Self-Generated Feedback Destabilizes Test-Time Training"
 message: "If you use this code, please cite the accompanying paper."
 type: software
 authors:
@@ -7,4 +7,4 @@ authors:
 version: 0.1.0
 date-released: 2026-09-29
 license: MIT
-repository-code: "https://github.com/lingjivoo/ttt"
+repository-code: "https://github.com/lingjivoo/ttt-ouroboros"

@@ -1,148 +1,123 @@
-# Self-Generated Feedback Destabilizes Test-Time Training
+# TTT Ouroboros
 
-Reproduction code for **“Self-Generated Feedback Destabilizes Test-Time
-Training: A Causal Decomposition of Long-Horizon Adaptation.”** The repository
-contains the native TTT-E2E runtime, the controlled long-horizon interventions,
-Settlement, the WebShop task experiment, audited per-book data and the scripts
-used to build the submitted figures.
+**Self-generated feedback in persistent test-time training.**
 
-The release is intentionally narrow. ALFWorld, ScienceWorld, retrieval and
-other exploratory experiments that are absent from the paper are excluded.
+Official reproduction code for **“Self-Generated Feedback Destabilizes
+Test-Time Training: A Causal Decomposition of Long-Horizon Adaptation.”**
 
-## What can be reproduced
+`Ouroboros` refers to the closed loop studied in the paper: an adapting model
+generates text, learns from that text, and thereby changes the data it will
+generate and learn from next.
 
-| Result family | Runner | Status |
-|---|---|---|
-| 125M/760M/3B Closed Loop vs Writes Off | `scripts/horizon.py` | released |
-| Fixed Generation and replay controls | `scripts/horizon.py`, `scripts/mechanism_pilot.py` | released |
-| Single-update transfer and gradient conflict | `scripts/preq_obs.py` | released |
-| Exposure-density boundary | `scripts/exposure_density_sweep.py` | released |
-| aTTT, write-dose and anchor controls | `scripts/attt_closed_loop.py`, `scripts/update_strength_sweep.py`, `scripts/anchor_causal.py` | released |
-| Language-model Settlement | `scripts/deferred.py`, `scripts/settlement_mixed.py` | released |
-| WebShop causal comparison | `scripts/ws_arms.py` | released |
-| Qwen3-4B real-text utility | `scripts/qwen_reviewer_p0c.py` | released |
-| Qwen3-4B long-horizon raw grid | — | audited aggregate only; original launcher not recovered |
-| Source-label corruption raw grid | — | audited aggregate only; original launcher not recovered |
-
-The exact mapping from each paper table or figure to code and data is in
-[`docs/PAPER_REPRODUCTION.md`](docs/PAPER_REPRODUCTION.md).
-
-## Repository layout
-
-```text
-ttt_pt/       TTT model, fast-weight state, streaming decoder and training code
-scripts/      experiment runners, release checks and suite orchestration
-configs/      versioned manifests and ordered experiment suites
-analysis/     paired aggregation and book-bootstrap summaries
-figures/      final figure generators
-data/         audited aggregate input for the canonical paper curves
-validation/   conversion, streaming and state-restoration checks
-tests/        CPU tests for mechanics, manifests and release workflows
+```mermaid
+flowchart LR
+    W[Current fast weights] --> G[Generate text]
+    G --> U[Test-time update]
+    U --> W
+    W -. independent clean probe .-> E[Future-text NLL]
 ```
 
-## 1. Create the environment
+## What this repository shows
+
+- **Closed-loop self-writing can cause severe long-horizon damage.** On the
+  audited 125M canonical suite, Closed Loop adds `3.0097` nats of first-to-last
+  clean-text harm over Writes Off.
+- **Generated text alone is insufficient.** Fixed Generation breaks the causal
+  path from the learner state to future generated data and reduces the same gap
+  to `0.0516` nats.
+- **The failure depends on exposure.** Frequent external text interrupts the
+  loop, while long generated bursts remain hazardous.
+- **The updates are state dependent and heavy tailed.** A small number of
+  trajectories enter high-cost states; identical updates can have different
+  effects at different receiver states.
+- **Settlement tests transfer before persistent commitment.** The release
+  includes language and WebShop implementations together with their controls.
+
+The repository contains the native TTT-E2E runtime, controlled causal
+interventions, versioned experiment manifests, paired analysis, audited
+per-book data, and the scripts used to build the paper figures.
+
+## Quick start
 
 The reference environment uses Python 3.11 and CUDA 12.4. PyTorch 2.5–2.9 is
-supported; the release GPU smoke test also runs under PyTorch 2.9.
-
-### Conda
+supported.
 
 ```bash
+git clone https://github.com/lingjivoo/ttt-ouroboros.git
+cd ttt-ouroboros
 conda env create -f environment.yml
-conda activate ttt-feedback
+conda activate ttt-ouroboros
 pip install -e .
 ```
 
-### Existing CUDA/PyTorch environment
-
-Install the CUDA-matched PyTorch wheel first, then:
-
-```bash
-pip install -e '.[language,dev]'
-```
-
-For WebShop:
-
-```bash
-pip install -e '.[language,agents,dev]'
-```
-
-### Docker
-
-```bash
-docker build -t ttt-feedback .
-docker run --gpus all --rm \
-  -v /absolute/data:/data:ro \
-  -v /absolute/checkpoints:/checkpoints:ro \
-  -v "$PWD/results:/workspace/ttt-feedback/results" \
-  -e TTT_DATA=/data -e TTT_CKPT=/checkpoints \
-  ttt-feedback --suite configs/suites/main_125m.yaml --smoke
-```
-
-## 2. Configure artifacts
+Configure the external artifacts:
 
 ```bash
 cp env.sh.example env.sh
-# Edit absolute paths.
+# Set TTT_DATA, TTT_CKPT and TTT_OUT to absolute paths.
 source env.sh
 ```
 
-Expected language artifacts:
+Validate the installation and run a one-book integration test:
+
+```bash
+make check
+python scripts/selfcheck.py --profile language --full
+python scripts/run_paper_suite.py \
+  --suite configs/suites/main_125m.yaml \
+  --smoke
+```
+
+The smoke test executes checkpoint loading, real-text prefill, autoregressive
+generation, fast-weight updates, branch-only probes and signed JSON output. It
+is an execution check rather than a paper result. See
+[`docs/VALIDATION.md`](docs/VALIDATION.md) for the completed release validation.
+
+## Data and checkpoints
+
+Model weights and corpora are external because of their size and upstream
+licenses. The canonical 125M experiment expects:
 
 ```text
 $TTT_DATA/pg19/val.npy
 $TTT_CKPT/125m-ext32k.pt
 ```
 
-`val.npy` is the tokenized PG-19 validation stream with book boundaries. Model
-weights and corpora are external because of size and upstream licenses. See
-[`docs/DATA.md`](docs/DATA.md) for Qwen and WebShop preparation.
+Optional scale suites expect:
 
-## 3. Validate before a long run
-
-```bash
-make check
-python scripts/selfcheck.py --profile language --full
+```text
+$TTT_CKPT/760m-ext32k.pt
+$TTT_CKPT/3b_128k_pt.pt
 ```
 
-`--full` loads the actual checkpoint on CUDA and performs one 1024-token update.
-Then run the three-arm integration smoke test:
+`val.npy` is the tokenized PG-19 validation stream with BOS-delimited book
+boundaries. Artifact preparation, hashes and the optional WebShop layout are
+documented in [`docs/DATA.md`](docs/DATA.md).
 
-```bash
-python scripts/run_paper_suite.py \
-  --suite configs/suites/main_125m.yaml \
-  --smoke
-```
+## Reproduce the canonical experiment
 
-Smoke outputs use one physical row, one seed and 16 chunks. They verify the full
-load → prefill → generate → update → branch-probe → save path and are not paper
-results. The completed release validation is recorded in
-[`docs/VALIDATION.md`](docs/VALIDATION.md).
-
-## 4. Run the canonical 125M experiment
+Run Writes Off, Closed Loop and Fixed Generation at 125M:
 
 ```bash
 python scripts/run_paper_suite.py \
   --suite configs/suites/main_125m.yaml
 ```
 
-The full suite runs Closed Loop, Writes Off and Fixed Generation. It maintains
-logical width 8 over physical rows/books 0–7, then reports screened books 2–7.
-Each arm uses seeds 42, 1, 7, 2 and 3, 128 chunks and 16 branch-only probes.
-Completed seeds are resumed safely from signed JSON outputs.
+The canonical protocol uses:
 
-The scale-comparison manifests use the same physical width, books, seeds and
-probe schedule:
+- logical width 8 over physical book rows 0–7;
+- reported books 2–7;
+- seeds 42, 1, 7, 2 and 3;
+- 128 chunks of 1,024 tokens;
+- temperature 1 and top-p 0.95;
+- eight real-text prefill writes;
+- 16 branch-only clean probes.
 
-```bash
-python scripts/run_paper_suite.py --suite configs/suites/main_760m.yaml
-python scripts/run_paper_suite.py --suite configs/suites/main_3b.yaml
-```
+The prefill-end baseline and first scheduled probe score the same read-only
+passage. This isolates state change from probe-text change and preserves the
+audited 25,601-token book-selection threshold.
 
-They expect `760m-ext32k.pt` and `3b_128k_pt.pt` under `TTT_CKPT`. The 3B suite
-is a true logical-width-8 run and therefore requires a high-memory GPU.
-
-Aggregate the paired results:
+Aggregate paired first-to-last changes and bootstrap books:
 
 ```bash
 python analysis/summarize_canonical.py \
@@ -152,38 +127,52 @@ python analysis/summarize_canonical.py \
   --out "$TTT_OUT/canonical/SUMMARY.md"
 ```
 
-The summary first averages seeds within each book and bootstraps the six books.
-It rejects outputs with the wrong width, book offset, probe count or protocol.
+The summarizer rejects results with mismatched checkpoints, corpus hashes,
+books, seeds, width or probe schedule.
 
-To inspect commands without launching GPU work:
-
-```bash
-make suite-dry-run
-python scripts/run_config.py configs/canonical_closed.yaml --dry-run
-```
-
-## 5. Other paper experiments
-
-Each runner exposes complete CLI documentation:
+Run the same protocol at larger scales:
 
 ```bash
-python scripts/exposure_density_sweep.py --help
-python scripts/preq_obs.py --help
-python scripts/deferred.py --help
-python scripts/attt_closed_loop.py --help
-python scripts/update_strength_sweep.py --help
-python scripts/anchor_causal.py --help
+python scripts/run_paper_suite.py --suite configs/suites/main_760m.yaml
+python scripts/run_paper_suite.py --suite configs/suites/main_3b.yaml
 ```
 
-The shared protocol and the reason some suites use separate long-book sets are
-specified in [`docs/EXPERIMENTS.md`](docs/EXPERIMENTS.md). Never pool canonical,
-exposure-density and Settlement endpoints solely because all are measured in
-nats.
+The 3B manifests preserve a true logical width of 8 and require a high-memory
+GPU. Inspect any suite without launching work using `--dry-run`.
 
-## 6. WebShop
+## Paper result map
 
-Set `WEBSHOP_DIR` to the upstream WebShop checkout and build the deterministic
-catalogue described in [`docs/DATA.md`](docs/DATA.md). The paper arms are:
+| Result family | Primary runner | Released material |
+|---|---|---|
+| 125M/760M/3B Closed Loop vs Writes Off | `scripts/horizon.py` | runner + manifests |
+| Fixed Generation and replay | `scripts/horizon.py`, `scripts/mechanism_pilot.py` | runner + manifests |
+| Exposure-density boundary | `scripts/exposure_density_sweep.py` | runner + analysis |
+| Single-update transfer and gradient conflict | `scripts/preq_obs.py` | runner |
+| State-dependent heavy tail | `scripts/acceptance_heavy_tail.py` | runner + figure input |
+| aTTT and matched write-dose controls | `scripts/attt_closed_loop.py` | runner |
+| Update-strength frontier | `scripts/update_strength_sweep.py` | runner + analysis |
+| Anchor causal decomposition | `scripts/anchor_causal.py` | runner |
+| Language Settlement | `scripts/deferred.py`, `scripts/settlement_mixed.py` | runner + analysis |
+| WebShop causal comparison | `scripts/ws_arms.py` | runner + paired analysis |
+| Qwen3-4B real-text utility | `scripts/qwen_reviewer_p0c.py` | runner |
+
+[`docs/PAPER_REPRODUCTION.md`](docs/PAPER_REPRODUCTION.md) maps individual
+tables and figures to their exact code and statistical unit. Canonical,
+exposure-density and Settlement endpoints belong to separate protocol families
+and must not be pooled merely because they are all measured in nats.
+
+## WebShop
+
+Install the optional agent dependencies and configure the upstream WebShop
+checkout and deterministic catalogue:
+
+```bash
+pip install -e '.[language,agents,dev]'
+python scripts/ws_build_catalogue.py --help
+```
+
+The four paper policies are `none` (Writes Off), `uniform` (Closed Loop),
+`fixed` (Fixed Generation) and `settlement`:
 
 ```bash
 python scripts/ws_arms.py --policy none       --stream-seed 0 --out "$TTT_OUT/webshop/off_s0.json"
@@ -192,30 +181,79 @@ python scripts/ws_arms.py --policy fixed      --stream-seed 0 --out "$TTT_OUT/we
 python scripts/ws_arms.py --policy settlement --stream-seed 0 --out "$TTT_OUT/webshop/settlement_s0.json"
 ```
 
-Repeat stream seeds 0–4. All arms process 900 training episodes and the same 150
-held-out goals. Settlement evaluates a temporary 25-episode candidate on 10
-disjoint validation goals.
+Repeat stream seeds 0–4. Each arm processes 900 training episodes and the same
+150 held-out goals. Settlement evaluates each temporary 25-episode candidate
+on 10 disjoint validation goals before commitment.
 
-## 7. Regenerate figures
+## Regenerate the figures
 
 ```bash
 make figures
 ```
 
-`figures/make_paper_figures.py` reads the committed audited per-book JSON for the
-unified canonical trajectory. Other figure scripts contain clearly marked final
-audited aggregates when the original raw launcher was not recovered.
+The canonical trajectory is rebuilt from committed audited per-book data in
+`data/unified_perbook_data.json`. Figure sources explicitly mark panels whose
+original raw launcher was unavailable and therefore use a frozen audited
+aggregate.
 
-## Reproducibility rules
+## Environment options
+
+For an existing CUDA-compatible PyTorch installation:
+
+```bash
+pip install -e '.[language,dev]'
+```
+
+For Docker:
+
+```bash
+docker build -t ttt-ouroboros .
+docker run --rm --gpus all \
+  -v /absolute/data:/data:ro \
+  -v /absolute/checkpoints:/checkpoints:ro \
+  -v "$PWD/results:/workspace/ttt-ouroboros/results" \
+  -e TTT_DATA=/data -e TTT_CKPT=/checkpoints \
+  ttt-ouroboros --suite configs/suites/main_125m.yaml --smoke
+```
+
+## Repository layout
+
+```text
+ttt_pt/       TTT model, fast-weight state, streaming decoder and update code
+configs/      versioned experiment manifests and ordered suites
+scripts/      experiment runners and release utilities
+analysis/     paired aggregation and book-bootstrap summaries
+figures/      submitted figure generators
+data/         audited aggregate inputs
+validation/   numerical and state-restoration checks
+tests/        mechanics, manifest and release-workflow tests
+docs/         protocol, installation and result-to-code documentation
+```
+
+## Reproducibility guarantees
 
 - Checkpoint, corpus, book selection, seed set, decoder and probe schedule are
-  part of a result's identity.
+  included in result identity.
 - Probes snapshot and restore all carried state; evaluation text is read-only.
-- Books or held-out tasks are independent units; repeated sampling seeds are
-  averaged within them.
-- JSON output is resumable only when its configuration signature matches.
-- `SOURCE_MANIFEST.json` contains SHA-256 and byte size for every released file.
+- Books or held-out tasks are independent units; seeds are averaged within
+  them before uncertainty is computed.
+- Interrupted JSON outputs resume only when their signed configuration matches.
+- Writes are atomic, preventing a preempted job from corrupting completed seeds.
+- `SOURCE_MANIFEST.json` records SHA256 and byte size for every released file.
 
 Run `make check` and `python scripts/source_manifest.py --check` before creating
-a release. Code is MIT licensed; checkpoints and datasets retain their upstream
+a release.
+
+## Scope
+
+This release is deliberately paper focused. ALFWorld, ScienceWorld, retrieval
+and other exploratory follow-ups that do not appear in the paper are excluded.
+The original Qwen3-4B long-horizon grid launcher and source-label-corruption
+grid launcher were unavailable in the recovered experiment snapshot; their
+audited aggregates and plotting paths are retained and explicitly identified.
+
+## Citation and license
+
+Citation metadata is provided in [`CITATION.cff`](CITATION.cff). Code is
+released under the MIT License. Checkpoints and datasets retain their upstream
 licenses.

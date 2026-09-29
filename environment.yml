@@ -1,4 +1,4 @@
-name: ttt-feedback
+name: ttt-ouroboros
 channels:
   - pytorch
   - nvidia

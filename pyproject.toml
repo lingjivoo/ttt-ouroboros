@@ -3,9 +3,9 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ttt-write-authority"
+name = "ttt-ouroboros"
 version = "0.1.0"
-description = "Reproduction code for long-horizon self-generated feedback in test-time training"
+description = "TTT Ouroboros: causal experiments on self-generated feedback in test-time training"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
