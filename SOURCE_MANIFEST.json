@@ -23,8 +23,8 @@
     },
     {
       "path": "CITATION.cff",
-      "sha256": "5371d680bae35ee145b484c1f5d9c14413d7616f2c87a3a2816233d08fa72279",
-      "bytes": 338
+      "sha256": "31b1b3137e45f740d5962c6e03ada36b5e77264c6108740754264f611297f41a",
+      "bytes": 763
     },
     {
       "path": "CONTRIBUTING.md",
@@ -48,8 +48,13 @@
     },
     {
       "path": "README.md",
-      "sha256": "915e0144fcd2b088ebd9dad223de5d3be61498c42357fa05da3db55148fa9214",
-      "bytes": 12456
+      "sha256": "0b2c444e2b009b170e49ab5e83ce44be54210165682fa1654821959df941d6e6",
+      "bytes": 4676
+    },
+    {
+      "path": "THIRD_PARTY_NOTICES.md",
+      "sha256": "6e18f6242457ef75ddd4d602f72dacc85c85ae3c8442237d38f2ee6dd970fbc9",
+      "bytes": 918
     },
     {
       "path": "analysis/__init__.py",
@@ -90,6 +95,11 @@
       "path": "analysis/summarize_canonical.py",
       "sha256": "48c60810201755d2c7f60469884a2e259aacacdffee1b825745e65b6071b061c",
       "bytes": 4918
+    },
+    {
+      "path": "assets/ouroboros_icon_handdrawn.png",
+      "sha256": "792f8786cfe25483933bd4e3227ffe51caf2bbe8984de853f0a5414d29a91dfa",
+      "bytes": 2086635
     },
     {
       "path": "cluster/slurm/canaries.sbatch",
@@ -222,11 +232,6 @@
       "bytes": 954
     },
     {
-      "path": "docs/RESULTS.md",
-      "sha256": "05fa555883e10fedfa1b0f9f58bcdedcd735d82b5a1decfa35cc25ab33404a32",
-      "bytes": 443
-    },
-    {
       "path": "docs/VALIDATION.md",
       "sha256": "36f965b0ad37f824cb72126fa4d0401655804bcfdb5a10dff2f04efbbdb59c2f",
       "bytes": 1079
@@ -263,8 +268,8 @@
     },
     {
       "path": "pyproject.toml",
-      "sha256": "99952f944fb5df3fc81c6614af727fedddfe3a3ef1fe82aa2ff0af60286fa560",
-      "bytes": 1086
+      "sha256": "592a20a1ebe577114027e0a446596c6677b19d07bf9b2ef0a158497e093242d5",
+      "bytes": 1125
     },
     {
       "path": "requirements-agents.txt",

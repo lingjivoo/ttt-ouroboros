@@ -1,10 +1,28 @@
 cff-version: 1.2.0
-title: "TTT Ouroboros: Self-Generated Feedback Destabilizes Test-Time Training"
-message: "If you use this code, please cite the accompanying paper."
+title: "TTT Ouroboros"
+message: "Please cite the accompanying paper."
 type: software
 authors:
-  - name: "Anonymous Authors"
+  - family-names: Luo
+    given-names: Cheng
+  - family-names: Li
+    given-names: Bing
+  - family-names: Ghanem
+    given-names: Bernard
 version: 0.1.0
-date-released: 2026-09-29
 license: MIT
 repository-code: "https://github.com/lingjivoo/ttt-ouroboros"
+preferred-citation:
+  type: article
+  title: "Self-Generated Feedback Destabilizes Test-Time Training: A Causal Decomposition of Long-Horizon Adaptation"
+  authors:
+    - family-names: Luo
+      given-names: Cheng
+    - family-names: Li
+      given-names: Bing
+    - family-names: Ghanem
+      given-names: Bernard
+  year: 2026
+  journal: arXiv
+  doi: "10.48550/arXiv.2610.05076"
+  url: "https://arxiv.org/abs/2610.05076"

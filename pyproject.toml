@@ -9,7 +9,7 @@ description = "TTT Ouroboros: causal experiments on self-generated feedback in t
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
-authors = [{name = "Anonymous Authors"}]
+authors = [{name = "Cheng Luo"}, {name = "Bing Li"}, {name = "Bernard Ghanem"}]
 dependencies = [
   "numpy>=2.0,<3",
   "einops>=0.8,<1",
