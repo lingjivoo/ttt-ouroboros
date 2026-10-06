@@ -9,9 +9,8 @@
 <p align="center">
   <a href="https://arxiv.org/abs/2610.05076">Paper</a> ·
   <a href="https://arxiv.org/pdf/2610.05076">PDF</a> ·
-  <a href="REPRODUCE.md">Installation</a> ·
-  <a href="REPRODUCE.md">Reproduce the paper</a> ·
-  <a href="REPRODUCE.md">Artifacts</a>
+  <a href="REPRODUCE.md">Reproduction guide</a> ·
+  <a href="README.zh-CN.md">中文</a>
 </p>
 
 What happens when a model repeatedly learns from its own output during inference?
@@ -24,10 +23,63 @@ validate its transfer to independent evidence, and only then commit it.
 The repository includes the PyTorch TTT runtime, experiment configurations,
 analysis scripts, and figure sources.
 
-## Quick start
+## Main findings
 
-Use a CUDA GPU for model experiments. CPU-only environments can run the
-lightweight tests and analyses; they do not reproduce GPU experiment results.
+The paper compares three policies after a shared real-text prefix. **Closed
+Loop** retains updates from generated text. **Writes Off** reads generated
+text but discards its updates. **Fixed Generation** has a frozen copy generate
+the text while a separate learner retains updates. Independent human-written
+passages are scored without changing the continuing stream.
+
+| TTT-E2E model | Extra clean-text NLL under Closed Loop vs. Writes Off |
+| --- | ---: |
+| 125M | +3.01 nats |
+| 760M | +6.00 nats |
+| 3B | +0.40 nats |
+
+These are first-to-last differences from the canonical six-book, five-seed,
+128K-token comparison. Lower NLL is better. The effect has the same direction
+at all three scales, but its size is not monotonic in model size.
+
+- **Generation feedback matters.** Fixed Generation removes more than 98% of
+  the measured harm at 125M and 760M even though the learner still updates.
+- **Reading and writing have distinct costs.** Recorded Replay holds the text
+  fixed and measures the extra cost of retaining its update.
+- **Fitting the source does not establish transfer.** An update can improve
+  prediction of the text that produced it while worsening prediction on new
+  real text. Its cost depends on the receiving state.
+- **External text changes the exposure.** Frequent real-text passages can
+  interrupt the loop; the exposure-density suite uses a separate book set.
+- **Settlement checks before commitment.** It tests the proposed state on
+  independent evidence before retaining it. Its reported endpoint gaps of
+  +0.07 nats at 125M and −0.02 nats at 760M come from separate validation
+  suites, so they must not be subtracted from the canonical values above.
+
+The paper also studies Adam updates to Qwen3-4B and an agent setting. The
+[reproduction guide](REPRODUCE.md) maps each result to its protocol and code.
+
+## Repository map
+
+| Path | Purpose |
+| --- | --- |
+| [`ttt_pt/`](ttt_pt/) | PyTorch TTT runtime and stream state |
+| [`configs/`](configs/) | Canonical experiment configurations |
+| [`scripts/`](scripts/) | Causal controls, replay, and Settlement runners |
+| [`analysis/`](analysis/) | Paired summaries and statistical analyses |
+| [`figures/`](figures/) | Figure-generation code |
+| [`data/unified_perbook_data.json`](data/unified_perbook_data.json) | Bundled per-book data for selected figures |
+| [`REPRODUCE.md`](REPRODUCE.md) | Setup, commands, protocol map, and artifact inventory |
+
+This compact release focuses on the main experiments. Large checkpoints,
+corpora, and some raw trajectories and result JSONs are external. The
+reproduction guide distinguishes figures available from bundled data from
+measurements that require a fresh run or additional raw files.
+
+## Installation and quick start
+
+Model runs require a CUDA GPU. The reference environment uses Python 3.11
+and the dependencies in `environment.yml`. CPU-only environments can run the
+lightweight tests and analyses.
 
 ```bash
 git clone https://github.com/lingjivoo/ttt-ouroboros.git
@@ -41,7 +93,7 @@ cp env.sh.example env.sh
 source env.sh
 ```
 
-Prepare the corpus and checkpoint using [Data](REPRODUCE.md), then check the
+Prepare the corpus and checkpoint using the [data instructions](REPRODUCE.md#data-and-checkpoints), then check the
 installation and run a small integration test:
 
 ```bash
@@ -50,8 +102,9 @@ python scripts/selfcheck.py --profile language --full
 python scripts/run_paper_suite.py --suite configs/suites/main_125m.yaml --smoke
 ```
 
-The smoke run checks execution, not the paper's reported result.
-See [Installation](REPRODUCE.md) for pip and agent dependencies.
+The smoke run checks checkpoint loading, generation, updates, and clean
+probes. It is an integration check, not a paper result. The
+[reproduction guide](REPRODUCE.md) also covers pip and agent dependencies.
 
 ## Models and data
 
@@ -61,8 +114,9 @@ See [Installation](REPRODUCE.md) for pip and agent dependencies.
 | TTT-E2E 760M, extended to 32K | `$TTT_CKPT/760m-ext32k.pt` | [Dropbox](https://www.dropbox.com/scl/fi/13qtne20u54t3x0wbm9h7/ext-760m-e2e-32k-pt?rlkey=q7qmr61uj3u7dr58s68oonr35&dl=1) |
 
 Checkpoints and tokenized corpora are distributed separately from source code.
-Save the downloaded checkpoints under the filenames shown above so the released
-configurations can locate them.
+Save the downloads under the filenames shown above so the released
+configurations can locate them. The 3B suite requires a matching 128K
+checkpoint, which is not linked here.
 Do not substitute a books8k checkpoint for an extended-context checkpoint.
 [Artifact availability](REPRODUCE.md) distinguishes bundled data from
 external or unavailable raw results.
@@ -76,11 +130,18 @@ python scripts/run_paper_suite.py --suite configs/suites/main_125m.yaml --dry-ru
 python scripts/run_paper_suite.py --suite configs/suites/main_125m.yaml
 ```
 
+The canonical suite runs eight physical rows at logical width eight and
+reports the screened books 2–7. It uses seeds 42, 1, 7, 2, and 3; 128 chunks
+of 1,024 tokens; a shared 8K real-text prefix; temperature 1 and top-p 0.95;
+and 16 read-only clean probes. Analysis averages seeds within each book and
+resamples books for intervals. Keep the checkpoint, corpus, book selection,
+decoder, probe schedule, and batch width matched across arms.
+
 | Experiment | Where to start |
 | --- | --- |
 | Closed Loop / Writes Off / Fixed Generation | [`configs/suites/`](configs/suites/) |
 | Exposure density and decoding | [Paper reproduction guide](REPRODUCE.md) |
-| Language Settlement | [`scripts/preq_obs.py`](scripts/preq_obs.py) |
+| Single-update transfer / language Settlement | [`scripts/preq_obs.py`](scripts/preq_obs.py) / [`scripts/deferred.py`](scripts/deferred.py) |
 | WebShop causal controls and Settlement | [`scripts/ws_arms.py`](scripts/ws_arms.py) |
 | Replay and gradient correlation | [Artifact and analysis guide](REPRODUCE.md) |
 | Tables and figures | [`analysis/`](analysis/) and [`figures/`](figures/) |
@@ -88,8 +149,8 @@ python scripts/run_paper_suite.py --suite configs/suites/main_125m.yaml
 Read the [protocol definitions](REPRODUCE.md) before comparing suites.
 Canonical harm and Settlement's within-suite endpoint gap use different
 protocols and must not be pooled. The [reproduction guide](REPRODUCE.md)
-provides commands and configuration details; [validation notes](REPRODUCE.md)
-record what has actually been checked.
+provides commands, configuration details, and an inventory of which raw
+results are available. A runnable script alone does not verify a paper value.
 
 ## Acknowledgments
 
