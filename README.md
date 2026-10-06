@@ -8,10 +8,13 @@
 <p align="center">Cheng Luo · Bing Li · Bernard Ghanem</p>
 <p align="center">King Abdullah University of Science and Technology (KAUST)</p>
 <p align="center">
-  <a href="https://arxiv.org/abs/2610.05076">Paper</a> ·
-  <a href="https://arxiv.org/pdf/2610.05076">PDF</a> ·
-  <a href="REPRODUCE.md">Reproduction guide</a> ·
-  <a href="README.zh-CN.md">中文</a>
+  <a href="https://arxiv.org/abs/2610.05076">📄 Paper</a> ·
+  <a href="https://arxiv.org/pdf/2610.05076">📕 PDF</a> ·
+  <a href="https://ttt-ouroboros.github.io/">🌐 Project website</a> ·
+  <a href="https://www.youtube.com/watch?v=mBityaXUTi8">▶️ Demo</a> ·
+  <a href="https://github.com/lingjivoo/ttt-ouroboros">💻 Code</a> ·
+  <a href="REPRODUCE.md">🧪 Reproduction guide</a> ·
+  <a href="README.zh-CN.md">🇨🇳 中文</a>
 </p>
 
 What happens when a model repeatedly learns from its own output during inference?
@@ -111,8 +114,8 @@ probes. It is an integration check, not a paper result. The
 
 | Model | Expected checkpoint path | Download |
 | --- | --- | --- |
-| TTT-E2E 125M, extended to 32K | `$TTT_CKPT/125m-ext32k.pt` | [Dropbox](https://www.dropbox.com/scl/fi/b3hdau2dn5s95kdydycp6/ext-125m-e2e-32k-pt?rlkey=rdyy0wbn4c5zwxj69p1ywp0xi&dl=1) |
-| TTT-E2E 760M, extended to 32K | `$TTT_CKPT/760m-ext32k.pt` | [Dropbox](https://www.dropbox.com/scl/fi/13qtne20u54t3x0wbm9h7/ext-760m-e2e-32k-pt?rlkey=q7qmr61uj3u7dr58s68oonr35&dl=1) |
+| TTT-E2E 125M, extended to 32K | `$TTT_CKPT/125m-ext32k.pt` | [📦 Dropbox](https://www.dropbox.com/scl/fi/b3hdau2dn5s95kdydycp6/ext-125m-e2e-32k-pt?rlkey=rdyy0wbn4c5zwxj69p1ywp0xi&dl=1) |
+| TTT-E2E 760M, extended to 32K | `$TTT_CKPT/760m-ext32k.pt` | [📦 Dropbox](https://www.dropbox.com/scl/fi/13qtne20u54t3x0wbm9h7/ext-760m-e2e-32k-pt?rlkey=q7qmr61uj3u7dr58s68oonr35&dl=1) |
 
 Checkpoints and tokenized corpora are distributed separately from source code.
 Save the downloads under the filenames shown above so the released

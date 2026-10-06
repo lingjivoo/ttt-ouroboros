@@ -8,10 +8,13 @@
 <p align="center">Cheng Luo · Bing Li · Bernard Ghanem</p>
 <p align="center">King Abdullah University of Science and Technology (KAUST)</p>
 <p align="center">
-  <a href="README.md">English</a> ·
-  <a href="https://arxiv.org/abs/2610.05076">论文</a> ·
-  <a href="https://arxiv.org/pdf/2610.05076">PDF</a> ·
-  <a href="REPRODUCE.md">复现指南（英文）</a>
+  <a href="https://arxiv.org/abs/2610.05076">📄 论文</a> ·
+  <a href="https://arxiv.org/pdf/2610.05076">📕 PDF</a> ·
+  <a href="https://ttt-ouroboros.github.io/">🌐 项目网站</a> ·
+  <a href="https://www.youtube.com/watch?v=mBityaXUTi8">▶️ 演示视频</a> ·
+  <a href="https://github.com/lingjivoo/ttt-ouroboros">💻 代码</a> ·
+  <a href="REPRODUCE.md">🧪 复现指南（英文）</a> ·
+  <a href="README.md">🇬🇧 English</a>
 </p>
 
 这是[论文](https://arxiv.org/abs/2610.05076)的配套代码。我们研究持续进行测试时训练（TTT）的模型：它生成一段文本，从这段文本学习，再用更新后的状态生成下一段训练文本。这个循环什么时候会损害对独立真实文本的预测？损害发生在生成、注意力读取还是持久权重写入？候选更新能否先验证、再提交？
@@ -90,8 +93,8 @@ Smoke test 检查权重加载、生成、更新和 clean probe 的执行链路�
 
 | 模型 | 保存为 | 下载 |
 | --- | --- | --- |
-| TTT-E2E 125M，32K 扩展 | `$TTT_CKPT/125m-ext32k.pt` | [Dropbox](https://www.dropbox.com/scl/fi/b3hdau2dn5s95kdydycp6/ext-125m-e2e-32k-pt?rlkey=rdyy0wbn4c5zwxj69p1ywp0xi&dl=1) |
-| TTT-E2E 760M，32K 扩展 | `$TTT_CKPT/760m-ext32k.pt` | [Dropbox](https://www.dropbox.com/scl/fi/13qtne20u54t3x0wbm9h7/ext-760m-e2e-32k-pt?rlkey=q7qmr61uj3u7dr58s68oonr35&dl=1) |
+| TTT-E2E 125M，32K 扩展 | `$TTT_CKPT/125m-ext32k.pt` | [📦 Dropbox](https://www.dropbox.com/scl/fi/b3hdau2dn5s95kdydycp6/ext-125m-e2e-32k-pt?rlkey=rdyy0wbn4c5zwxj69p1ywp0xi&dl=1) |
+| TTT-E2E 760M，32K 扩展 | `$TTT_CKPT/760m-ext32k.pt` | [📦 Dropbox](https://www.dropbox.com/scl/fi/13qtne20u54t3x0wbm9h7/ext-760m-e2e-32k-pt?rlkey=q7qmr61uj3u7dr58s68oonr35&dl=1) |
 
 3B 实验需要与配置相符的 128K checkpoint，此处尚未提供下载链接。不要用 books8k checkpoint 代替扩展上下文权重。125M 下载后可运行 `python scripts/selfcheck.py --profile language --full` 验证加载。
 
