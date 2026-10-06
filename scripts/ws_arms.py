@@ -21,9 +21,10 @@ def evaluate(eng, env, n, seed):
     """Per-goal reward vector, not just its mean: arms are paired by goal, and a
     mean alone cannot be paired."""
     env.seed(seed)
-    rewards, bought = [], []
+    rewards, bought, goal_ids = [], [], []
     for _ in range(n):
         obs, info = env.reset()
+        goal_ids.append(env.last_goal_id)
         obs, acts = obs[0], info["admissible_commands"][0]
         goal, hist, r, done = env.env.instruction_text, [], 0.0, False
         for _ in range(env.max_steps):
@@ -37,7 +38,7 @@ def evaluate(eng, env, n, seed):
                 break
         rewards.append(float(r))
         bought.append(1 if done else 0)
-    return rewards, bought
+    return rewards, bought, goal_ids
 
 
 def main():
@@ -137,6 +138,8 @@ def main():
         "episodes": [],
         "eval": [],
         "settlement": [],
+        "stream_manifest": stream.manifest(),
+        "evaluation_manifest": ev.manifest(),
     }
     ck = os.path.splitext(args.out)[0] + "_fast.pt"
 
@@ -182,7 +185,7 @@ def main():
             print(f"resuming {args.policy} at episode {start}", flush=True)
 
     if start == 0:
-        rw, bt = evaluate(eng, ev, args.eval_episodes, args.eval_seed)
+        rw, bt, goal_ids = evaluate(eng, ev, args.eval_episodes, args.eval_seed)
         res["eval"].append(
             {
                 "step": 0,
@@ -191,6 +194,7 @@ def main():
                 "win_rate": float(np.mean([r >= 1.0 for r in rw])),
                 "rewards": rw,
                 "bought": bt,
+                "goal_ids": goal_ids,
             }
         )
         print(f"  eval@0: reward {np.mean(rw):.3f} buy {np.mean(bt):.2f}", flush=True)
@@ -216,9 +220,15 @@ def main():
             wrote, n_w_steps = True, len(samples)
         if args.policy == "settlement" and (ep + 1) % args.settle_every == 0:
             candidate = state()
-            cand_rw, _ = evaluate(eng, ev, args.settle_eval_episodes, args.settle_seed)
+            cand_rw, _, cand_goal_ids = evaluate(
+                eng, ev, args.settle_eval_episodes, args.settle_seed
+            )
             restore(committed)
-            base_rw, _ = evaluate(eng, ev, args.settle_eval_episodes, args.settle_seed)
+            base_rw, _, base_goal_ids = evaluate(
+                eng, ev, args.settle_eval_episodes, args.settle_seed
+            )
+            if cand_goal_ids != base_goal_ids:
+                raise RuntimeError("Settlement candidate/base validation goals differ")
             keep = float(np.mean(cand_rw)) > float(np.mean(base_rw))
             if keep:
                 restore(candidate)
@@ -229,6 +239,7 @@ def main():
                     "candidate_reward": float(np.mean(cand_rw)),
                     "current_reward": float(np.mean(base_rw)),
                     "accepted": keep,
+                    "goal_ids": cand_goal_ids,
                 }
             )
         res["episodes"].append(
@@ -241,6 +252,7 @@ def main():
                 "n_steps": len(samples),
                 "n_written": n_w_steps,
                 "drift": drift(),
+                "goal_id": stream.last_goal_id,
             }
         )
         if (ep + 1) % args.ckpt_every == 0:
@@ -251,7 +263,7 @@ def main():
                 flush=True,
             )
 
-    rw, bt = evaluate(eng, ev, args.eval_episodes, args.eval_seed)
+    rw, bt, goal_ids = evaluate(eng, ev, args.eval_episodes, args.eval_seed)
     res["eval"].append(
         {
             "step": args.episodes,
@@ -260,6 +272,7 @@ def main():
             "win_rate": float(np.mean([r >= 1.0 for r in rw])),
             "rewards": rw,
             "bought": bt,
+            "goal_ids": goal_ids,
         }
     )
     res["writes"] = sum(1 for e in res["episodes"] if e["written"])

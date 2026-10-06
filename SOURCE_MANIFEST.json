@@ -48,8 +48,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "7d7236b355d08ee27fe293afa168852308aea57264d489b52268644154ea0544",
-      "bytes": 9390
+      "sha256": "915e0144fcd2b088ebd9dad223de5d3be61498c42357fa05da3db55148fa9214",
+      "bytes": 12456
     },
     {
       "path": "analysis/__init__.py",
@@ -75,6 +75,16 @@
       "path": "analysis/analyze_update_strength_sweep.py",
       "sha256": "238fc5140569e619d5f51b97c64add56bd46056b696f99fc93cb424a2c30dc3e",
       "bytes": 4071
+    },
+    {
+      "path": "analysis/bootstrap_gradient_correlation.py",
+      "sha256": "bb470dd4be0d305613136c9717f8ba472cdfc5cae84e0f4d19a051726f7a9cce",
+      "bytes": 4124
+    },
+    {
+      "path": "analysis/bootstrap_webshop.py",
+      "sha256": "ab565543dfbfba118d0dc6635f7bb25632b687cf005ad73f91d2a02762094de8",
+      "bytes": 2786
     },
     {
       "path": "analysis/summarize_canonical.py",
@@ -177,6 +187,11 @@
       "bytes": 280290
     },
     {
+      "path": "docs/ARTIFACTS.md",
+      "sha256": "c9822408c947a465544567042c4ce67f3d519f5ae63c3d25efd13467c84b6643",
+      "bytes": 2344
+    },
+    {
       "path": "docs/DATA.md",
       "sha256": "822d47ce9e8c792595aa74d04a928254dbd8f124c44f300cfcb8755a64d5ee97",
       "bytes": 1744
@@ -193,8 +208,8 @@
     },
     {
       "path": "docs/PAPER_REPRODUCTION.md",
-      "sha256": "43a6b4d2dd86a408ca34a344c741634bace684df74e0fbf523ed2e318c69d16f",
-      "bytes": 6436
+      "sha256": "e7b32e8dfb336d7aa613cc860a9d385fe954f4bed8ab19a3a4e671ef389ddc3d",
+      "bytes": 7561
     },
     {
       "path": "docs/RELEASE_CHECKLIST.md",
@@ -317,6 +332,11 @@
       "bytes": 14239
     },
     {
+      "path": "scripts/p1_direction_prediction.py",
+      "sha256": "e8d54190401e73abc7bb8516ada86e9c9d32d236b62fdeb3dc8deeab6fe2d28c",
+      "bytes": 11463
+    },
+    {
       "path": "scripts/preq_obs.py",
       "sha256": "e9f869365bd56793aee3f014595e83710d81fd2b379b86802e2798beb14e95f5",
       "bytes": 35082
@@ -330,6 +350,11 @@
       "path": "scripts/qwen_reviewer_p0c.py",
       "sha256": "49704ca429ed2c035b4440e5d680239f7b5d192862e47d7ae2b28ed06769d480",
       "bytes": 6617
+    },
+    {
+      "path": "scripts/reviewer_3b_replay.py",
+      "sha256": "c8ee4a6e56c88aabcb86c6090b1f557263baa7705126f1ee78b3b91fce3471fa",
+      "bytes": 5627
     },
     {
       "path": "scripts/run_config.py",
@@ -378,8 +403,8 @@
     },
     {
       "path": "scripts/ws_arms.py",
-      "sha256": "00cce03b4c919760a981f24fa407efaddc708c034d7c1e843c64b79d1151185e",
-      "bytes": 10263
+      "sha256": "1f2db718b395072489f85fde5b797eff1374cb7e4997d00e03ee2f1a339c9989",
+      "bytes": 10833
     },
     {
       "path": "scripts/ws_build_catalogue.py",
@@ -388,8 +413,8 @@
     },
     {
       "path": "scripts/ws_env.py",
-      "sha256": "f9101cc3d506794cc8e86a56b2ea67478a279d4e1d50f5f2c35cbe66edba7b47",
-      "bytes": 11917
+      "sha256": "d6e05d489d1bccd464e72704f950b788f864db905c461b856d8f9ddf1b83edfa",
+      "bytes": 12901
     },
     {
       "path": "tests/test_manifests.py",

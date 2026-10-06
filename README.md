@@ -37,6 +37,22 @@ The repository contains the native TTT-E2E runtime, controlled causal
 interventions, versioned experiment manifests, paired analysis, audited
 per-book data, and the scripts used to build the paper figures.
 
+## What is code, data, and evidence
+
+The repository keeps three layers separate:
+
+1. **Runners and manifests** define the experiment and write sample-level JSON.
+2. **Analysis scripts** consume those JSONs and define the statistical unit.
+3. **Frozen artifact bundles** contain large checkpoints, recorded trajectories,
+   and raw result JSONs. They are distributed separately and identified by
+   SHA256; they are not silently reconstructed from manuscript tables.
+
+This distinction matters for auditability. A runnable script establishes that
+an experiment can be repeated; only its original raw JSON establishes the
+sample count, pairing, overlap checks, and confidence interval reported in the
+paper. See [`docs/ARTIFACTS.md`](docs/ARTIFACTS.md) for the exact availability
+of each result family.
+
 ## Quick start
 
 The reference environment uses Python 3.11 and CUDA 12.4. PyTorch 2.5–2.9 is
@@ -145,9 +161,11 @@ GPU. Inspect any suite without launching work using `--dry-run`.
 | Result family | Primary runner | Released material |
 |---|---|---|
 | 125M/760M/3B Closed Loop vs Writes Off | `scripts/horizon.py` | runner + manifests |
-| Fixed Generation and replay | `scripts/horizon.py`, `scripts/mechanism_pilot.py` | runner + manifests |
+| Fixed Generation and 125M replay | `scripts/horizon.py`, `scripts/mechanism_pilot.py` | runner + manifests |
+| Disjoint-source 3B replay | `scripts/reviewer_3b_replay.py` | exact runner; recorded trajectories external |
 | Exposure-density boundary | `scripts/exposure_density_sweep.py` | runner + analysis |
-| Single-update transfer and gradient conflict | `scripts/preq_obs.py` | runner |
+| Single-update transfer | `scripts/preq_obs.py` | runner |
+| Gradient direction/correlation | `scripts/p1_direction_prediction.py` | exact runner + cluster bootstrap |
 | State-dependent heavy tail | `scripts/acceptance_heavy_tail.py` | runner + figure input |
 | aTTT and matched write-dose controls | `scripts/attt_closed_loop.py` | runner |
 | Update-strength frontier | `scripts/update_strength_sweep.py` | runner + analysis |
@@ -184,6 +202,51 @@ python scripts/ws_arms.py --policy settlement --stream-seed 0 --out "$TTT_OUT/we
 Repeat stream seeds 0–4. Each arm processes 900 training episodes and the same
 150 held-out goals. Settlement evaluates each temporary 25-episode candidate
 on 10 disjoint validation goals before commitment.
+
+New result JSONs include the exact goal IDs, split identity and goal-set hashes.
+The runner aborts if candidate and committed states are evaluated on different
+validation goals. Analyze five-seed outputs with a paired seed/goal bootstrap:
+
+```bash
+python analysis/bootstrap_webshop.py \
+  --arm "$TTT_OUT/webshop/settlement" \
+  --control "$TTT_OUT/webshop/writes_off_s0.json" \
+  --pattern 'settlement_s*.json' \
+  --out "$TTT_OUT/webshop/settlement_bootstrap.json"
+```
+
+The original formal WebShop JSONs predate inline goal IDs. Their separately
+released goal manifest deterministically reconstructs the split and confirms
+zero overlap among the 900-task training streams, 10 validation goals and 150
+final-evaluation goals.
+
+## Replay and gradient-direction audits
+
+The formal 3B replay runner records a generated source once, replays identical
+tokens into disjoint receiver books, and compares read-only with read+write:
+
+```bash
+python scripts/reviewer_3b_replay.py --help
+```
+
+Every output contains source and receiver byte bounds, received-token hashes,
+checkpoint/data/code hashes, per-book NLL curves and the condition name. The
+recording and result JSONs live in the external artifact bundle.
+
+The gradient-direction experiment measures whether the candidate update's
+alignment with a clean-text gradient predicts realized transfer damage:
+
+```bash
+python scripts/p1_direction_prediction.py --help
+python analysis/bootstrap_gradient_correlation.py \
+  --input "$TTT_OUT/gradient_direction/raw" \
+  --split confirmation --history closed \
+  --out "$TTT_OUT/gradient_direction/confirmation_closed_bootstrap.json"
+```
+
+Its bootstrap resamples books and seeds as clusters while retaining all stream
+positions. Do not substitute update norm or one-write NLL transfer for gradient
+cosine; they answer different questions.
 
 ## Regenerate the figures
 
@@ -251,6 +314,9 @@ and other exploratory follow-ups that do not appear in the paper are excluded.
 The original Qwen3-4B long-horizon grid launcher and source-label-corruption
 grid launcher were unavailable in the recovered experiment snapshot; their
 audited aggregates and plotting paths are retained and explicitly identified.
+The original 3B replay result JSONs were also not recovered; the exact runner
+and recorded source trajectories survive, so this cell is rerunnable but its
+previous point estimates are not independently auditable from this source tree.
 
 ## Citation and license
 

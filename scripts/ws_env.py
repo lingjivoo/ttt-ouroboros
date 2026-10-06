@@ -23,6 +23,7 @@ Interface mirrors sw_env.SWBatchEnv: reset() -> (obs, admissible actions),
 step(action) -> (obs, reward, done), and `last_score` for the graded outcome, so
 agent_ttt's run_episode and the write policies work unchanged.
 """
+import hashlib
 import json
 import os
 import random
@@ -163,10 +164,35 @@ class WSEnv:
         random.Random(seed).shuffle(idx)
         cut = int(n * (1 - test_frac))
         self.goals = idx[:cut] if split == "train" else idx[cut:]
+        self.split = split
+        self.split_seed = seed
+        self.total_goal_count = n
         assert self.goals, f"no {split} goals among {n}"
         self.order = list(range(len(self.goals)))
         self.i = 0
         self.last_score = 0.0
+        self.last_goal_id = None
+
+    @staticmethod
+    def _ids_sha256(ids):
+        payload = (json.dumps(list(ids), separators=(",", ":")) + "\n").encode()
+        return hashlib.sha256(payload).hexdigest()
+
+    def manifest(self):
+        """Stable split identity for result JSONs and overlap audits."""
+        return {
+            "split": self.split,
+            "split_seed": self.split_seed,
+            "total_goal_count": self.total_goal_count,
+            "split_goal_count": len(self.goals),
+            "split_goal_ids_sha256": self._ids_sha256(self.goals),
+        }
+
+    def ordered_goal_ids(self, n=None):
+        """Goal IDs in the exact order produced by subsequent resets."""
+        ids = [self.goals[self.order[i % len(self.order)]]
+               for i in range(len(self.order) if n is None else n)]
+        return ids
 
     def seed(self, n):
         # Rebuild the identity order before shuffling. Shuffling in place is not
@@ -195,6 +221,7 @@ class WSEnv:
     def reset(self):
         g = self.goals[self.order[self.i % len(self.order)]]
         self.i += 1
+        self.last_goal_id = int(g)
         obs, _ = self.env.reset(session=g)
         self.last_score = 0.0
         o = self._clip(obs)

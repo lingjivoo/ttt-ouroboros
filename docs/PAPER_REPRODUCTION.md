@@ -13,6 +13,7 @@ Do not pool rows across these families.
 | Canonical TTT-E2E | PG-19 book | run rows 0–7; report books 2–7 | 42, 1, 7, 2, 3 | `scripts/horizon.py` |
 | Exposure density | long PG-19 book | 8 fixed long books | 5 | `scripts/exposure_density_sweep.py` |
 | Single update | PG-19 book/state pair | 8 books, positions 1/33/65/97 | paired | `scripts/preq_obs.py` |
+| Gradient direction | PG-19 book/state pair | 8 books, positions 1/33/65/97 | 5 | `scripts/p1_direction_prediction.py` |
 | Settlement | long PG-19 book | scale-specific long-book sets | paired | `scripts/deferred.py` |
 | WebShop | held-out goal, paired within seed | 900 train / 150 test goals | 5 | `scripts/ws_arms.py` |
 
@@ -35,7 +36,8 @@ selection threshold.
 | Figure 2, feedback-path intervention | `scripts/horizon.py`, `scripts/mechanism_pilot.py` | `open`/Fixed Generation uses a frozen generator and an adapting receiver. |
 | Figure 3a, drift and endpoint damage | `scripts/horizon.py`, `figures/make_paper_figures.py` | Closed, Writes Off, Fixed Generation and Real-Text Learning. |
 | Figure 3b, recorded replay | `scripts/horizon.py`, `scripts/mechanism_pilot.py` | Record once, then replay identical tokens read-only and read+write. |
-| Tables 5–6, one-write cost/conflict | `scripts/preq_obs.py` | Snapshot a common state and keep/discard one identical candidate update. |
+| Tables 5–6, one-write transfer | `scripts/preq_obs.py` | Snapshot a common state and keep/discard one identical candidate update. |
+| Gradient-direction diagnostic | `scripts/p1_direction_prediction.py`, `analysis/bootstrap_gradient_correlation.py` | Measures exact clean-gradient/candidate-update alignment and realized transfer damage; bootstrap books and seeds as clusters. |
 | Figure 4a–b, heavy tail | `scripts/acceptance_heavy_tail.py`, `figures/make_paper_figures.py` | Passage-level fixed-receiver comparisons; source sequence is the independent source unit. |
 | Figure 4c/Table 28, WebShop | `scripts/ws_arms.py`, `analysis/agent_stats.py`, `figures/make_agent_causal_success.py` | `none`, `uniform`, `fixed`, `settlement` map to the four paper arms. |
 | Figure 5a, Settlement | `scripts/deferred.py`, `analysis/analyze_settlement_value.py`, `figures/make_provenance_noise.py` | Compare each scale only with its paired Writes Off trajectory. |
@@ -93,6 +95,21 @@ Repeat seeds 0–4. Settlement accumulates a temporary 25-episode candidate whil
 the committed state supplies actions, evaluates current and candidate states on
 the same 10 disjoint validation goals, and commits only on higher mean reward.
 Final evaluation uses the same 150 held-out goals with writes disabled.
+Current runner outputs include ordered goal IDs and split hashes. Historical
+formal JSONs use the deterministic goal manifest distributed with the frozen
+artifact bundle to establish the same pairing and zero overlap.
+
+## 3B recorded replay
+
+`scripts/reviewer_3b_replay.py` separates source and receiver books and writes
+token hashes into every output. Run `--task record` once per source trajectory,
+then run `--task replay --condition read` and `--condition write` against the
+same record. Do not aggregate cells unless their source-record, checkpoint,
+dataset and code hashes match.
+
+The exact runner and three recorded source trajectories were recovered. The
+original read/write result JSONs were not, so any new numbers from this runner
+are rerun results.
 
 ## Figure regeneration
 
