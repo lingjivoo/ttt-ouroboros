@@ -6,6 +6,7 @@
 
 <p align="center"><b>Self-Generated Feedback Destabilizes Test-Time Training:<br>A Causal Decomposition of Long-Horizon Adaptation</b></p>
 <p align="center">Cheng Luo · Bing Li · Bernard Ghanem</p>
+<p align="center">King Abdullah University of Science and Technology (KAUST)</p>
 <p align="center">
   <a href="https://arxiv.org/abs/2610.05076">Paper</a> ·
   <a href="https://arxiv.org/pdf/2610.05076">PDF</a> ·
