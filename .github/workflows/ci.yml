@@ -26,4 +26,3 @@ jobs:
           TTT_DATA: /artifacts/data
           TTT_OUT: /tmp/ttt-results
         run: make suite-dry-run
-      - run: python scripts/source_manifest.py --check

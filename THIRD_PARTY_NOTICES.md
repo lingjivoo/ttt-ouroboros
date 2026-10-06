@@ -16,4 +16,4 @@ does not replace licenses attached to third-party code, datasets, or weights.
 WebShop, its product data, PG-19, and third-party model checkpoints are obtained
 separately. Users should follow the licenses and access conditions of their
 respective providers. Installation instructions and data paths are documented
-in [INSTALL.md](docs/INSTALL.md) and [DATA.md](docs/DATA.md).
+in [REPRODUCE.md](REPRODUCE.md).

@@ -9,9 +9,9 @@
 <p align="center">
   <a href="https://arxiv.org/abs/2610.05076">Paper</a> ·
   <a href="https://arxiv.org/pdf/2610.05076">PDF</a> ·
-  <a href="docs/INSTALL.md">Installation</a> ·
-  <a href="docs/PAPER_REPRODUCTION.md">Reproduce the paper</a> ·
-  <a href="docs/ARTIFACTS.md">Artifacts</a>
+  <a href="REPRODUCE.md">Installation</a> ·
+  <a href="REPRODUCE.md">Reproduce the paper</a> ·
+  <a href="REPRODUCE.md">Artifacts</a>
 </p>
 
 What happens when a model repeatedly learns from its own output during inference?
@@ -41,17 +41,17 @@ cp env.sh.example env.sh
 source env.sh
 ```
 
-Prepare the corpus and checkpoint using [Data](docs/DATA.md), then check the
+Prepare the corpus and checkpoint using [Data](REPRODUCE.md), then check the
 installation and run a small integration test:
 
 ```bash
-make check
+python -m pytest
 python scripts/selfcheck.py --profile language --full
 python scripts/run_paper_suite.py --suite configs/suites/main_125m.yaml --smoke
 ```
 
 The smoke run checks execution, not the paper's reported result.
-See [Installation](docs/INSTALL.md) for pip, Docker, and agent dependencies.
+See [Installation](REPRODUCE.md) for pip and agent dependencies.
 
 ## Models and data
 
@@ -63,7 +63,7 @@ See [Installation](docs/INSTALL.md) for pip, Docker, and agent dependencies.
 Checkpoints and tokenized corpora are distributed separately from source code.
 Download links will be added after checkpoint identity and SHA256 verification.
 Do not substitute a books8k checkpoint for an extended-context checkpoint.
-[Artifact availability](docs/ARTIFACTS.md) distinguishes bundled data from
+[Artifact availability](REPRODUCE.md) distinguishes bundled data from
 external or unavailable raw results.
 
 ## Reproduce the experiments
@@ -78,16 +78,16 @@ python scripts/run_paper_suite.py --suite configs/suites/main_125m.yaml
 | Experiment | Where to start |
 | --- | --- |
 | Closed Loop / Writes Off / Fixed Generation | [`configs/suites/`](configs/suites/) |
-| Exposure density, decoding, and update strength | [Paper reproduction guide](docs/PAPER_REPRODUCTION.md) |
+| Exposure density and decoding | [Paper reproduction guide](REPRODUCE.md) |
 | Language Settlement | [`scripts/preq_obs.py`](scripts/preq_obs.py) |
 | WebShop causal controls and Settlement | [`scripts/ws_arms.py`](scripts/ws_arms.py) |
-| Replay and gradient correlation | [Artifact and analysis guide](docs/ARTIFACTS.md) |
+| Replay and gradient correlation | [Artifact and analysis guide](REPRODUCE.md) |
 | Tables and figures | [`analysis/`](analysis/) and [`figures/`](figures/) |
 
-Read the [protocol definitions](docs/EXPERIMENTS.md) before comparing suites.
+Read the [protocol definitions](REPRODUCE.md) before comparing suites.
 Canonical harm and Settlement's within-suite endpoint gap use different
-protocols and must not be pooled. The [reproduction guide](docs/PAPER_REPRODUCTION.md)
-provides commands and configuration details; [validation notes](docs/VALIDATION.md)
+protocols and must not be pooled. The [reproduction guide](REPRODUCE.md)
+provides commands and configuration details; [validation notes](REPRODUCE.md)
 record what has actually been checked.
 
 ## Acknowledgments
