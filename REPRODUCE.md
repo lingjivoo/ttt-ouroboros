@@ -244,7 +244,7 @@ baseline. Each final evaluation contains 150 paired goal-level outcomes.
 ## Known missing evidence
 
 The original `reviewer-p0b-replay-v1` 3B read/write JSONs were not present in
-the recovered H200, t2, release, unified-audit or local experiment snapshots.
+the recovered experiment and release snapshots.
 Any newly generated files must be labelled as reruns and carry new code,
 checkpoint, dataset and trajectory hashes.
 
