@@ -57,11 +57,12 @@ See [Installation](REPRODUCE.md) for pip and agent dependencies.
 
 | Model | Expected checkpoint path | Download |
 | --- | --- | --- |
-| TTT-E2E 125M, extended to 32K | `$TTT_CKPT/125m-ext32k.pt` | Release pending |
-| TTT-E2E 760M, extended to 32K | `$TTT_CKPT/760m-ext32k.pt` | Release pending |
+| TTT-E2E 125M, extended to 32K | `$TTT_CKPT/125m-ext32k.pt` | [Dropbox](https://www.dropbox.com/scl/fi/b3hdau2dn5s95kdydycp6/ext-125m-e2e-32k-pt?rlkey=rdyy0wbn4c5zwxj69p1ywp0xi&dl=1) |
+| TTT-E2E 760M, extended to 32K | `$TTT_CKPT/760m-ext32k.pt` | [Dropbox](https://www.dropbox.com/scl/fi/13qtne20u54t3x0wbm9h7/ext-760m-e2e-32k-pt?rlkey=q7qmr61uj3u7dr58s68oonr35&dl=1) |
 
 Checkpoints and tokenized corpora are distributed separately from source code.
-Download links will be added after checkpoint identity and SHA256 verification.
+Save the downloaded checkpoints under the filenames shown above so the released
+configurations can locate them.
 Do not substitute a books8k checkpoint for an extended-context checkpoint.
 [Artifact availability](REPRODUCE.md) distinguishes bundled data from
 external or unavailable raw results.
