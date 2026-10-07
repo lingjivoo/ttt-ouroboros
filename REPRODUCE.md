@@ -249,6 +249,118 @@ Any newly generated files must be labelled as reruns and carry new code,
 checkpoint, dataset and trajectory hashes.
 
 
+## Experimental training harness
+
+These runners study training cost and adaptation after training. They are
+**not the experiments underlying the paper's existing tables**. All four arms
+share the same prime architecture and outer AdamW optimizer:
+
+| `--method` | Inner updates | Outer gradient |
+|---|---|---|
+| `adam` | None | Ordinary language-model gradient |
+| `exact` | Original sequential K=1 | Second-order meta-gradient |
+| `fo` | Fixed weights within K=2 blocks; average gradient then update | First order; full suffix KV graph |
+| `shared` | Same K=2 forward update | Reused backward; truncated suffix KV graph, full prefix backward |
+
+K=1 and K=2 differ in update frequency and dose. Their comparison does not
+isolate the gradient approximation. None of these training arms includes a
+Settlement gate. Use `python -m scripts.atomic_block_pilot --help` and
+`python -m scripts.atomic_block_closed_pilot --help` for separate block-level
+Settlement diagnostics.
+
+### Train 125M from random initialization
+
+Run from a repository checkout with `pip install -e '.[language,dev]'`.
+The current GPU harness targets large-memory CUDA devices and waits for at
+least **110 GiB free VRAM** before loading its model. This is a launcher guard,
+not the measured peak allocation of every method. The documented configuration
+has been smoke-tested on H200; smaller GPUs need a separately validated setup.
+
+The reference is the [official TTT-E2E pretraining recipe](https://github.com/test-time-training/e2e/blob/a4fc4788ace38e29b5067916d4f4be33da894085/configs/training/125m/pretrain-8K.yaml):
+8,192-token sequences, global batch 64, 4,800 optimizer steps, and
+**2,516,582,400 tokens per arm**. Outer LR warms up from zero to 0.003 over
+480 steps, then decays toward 1e-5. Inner LR warms up from 0.1 to 1 over
+480 steps. Model seed is zero by default.
+
+Prepare public DCLM with the pinned Llama-3 tokenizer:
+
+```bash
+python -m scripts.prepare_scratch_dclm \
+  --out data/scratch_dclm \
+  --workers 8 --tokenizer-threads 8 \
+  --tokenizer-revision 315b20096dc791d381d514deb5f8bd9c8d6d3061
+```
+
+The preparer filters documents shorter than 8K tokens, removes exact text
+duplicates, and holds out all documents whose content hash selects the validation
+partition. It saves 64 validation documents, each evaluated over its first 8K
+tokens. It pins the dataset revision in `plan.json` on first launch and records
+source and token hashes. This is **re-tokenized public DCLM, not the official
+pre-tokenized bucket**; source-shard ordering also differs from the official
+Grain shuffle. The implementation is PyTorch rather than JAX. Near-duplicate
+overlap is not ruled out by the exact-content hash split.
+
+Once `ready.json` and `validation.npy` exist, training can consume the committed
+prefix while preparation continues. Missing data causes a wait, never repeated
+samples or zero padding. Run each command on its own GPU:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 TTT_CKPT_PREFIX=1 python -m scripts.train_scratch_comparison \
+  --method adam --data data/scratch_dclm --out results/scratch/adam --microbatch 2
+CUDA_VISIBLE_DEVICES=1 TTT_CKPT_PREFIX=1 python -m scripts.train_scratch_comparison \
+  --method exact --data data/scratch_dclm --out results/scratch/exact --microbatch 2
+CUDA_VISIBLE_DEVICES=2 TTT_CKPT_PREFIX=1 python -m scripts.train_scratch_comparison \
+  --method fo --data data/scratch_dclm --out results/scratch/fo --microbatch 2
+CUDA_VISIBLE_DEVICES=3 TTT_CKPT_PREFIX=1 python -m scripts.train_scratch_comparison \
+  --method shared --data data/scratch_dclm --out results/scratch/shared --microbatch 2
+```
+
+Microbatch two uses 32 accumulation steps to retain global batch 64. The
+scratch entry point has **no pretrained-checkpoint option**. It hashes random
+initialization before training; verify equal hashes across arms. For an
+integration check, add `--smoke-steps 3` and use distinct `results/smoke/*`
+output directories. A smoke run is not a completed pretraining run.
+
+Each arm writes:
+
+- `config.json`: initialization, code and data-plan hashes, schedules and method;
+- `train.jsonl`: loss, gradient norm, LR, inner multiplier, step time and peak memory;
+- `validation.jsonl`: fixed-document NLL under no writes, K=1 and K=2, initially
+  and every 200 steps;
+- `latest.pt`: atomic model/optimizer/RNG checkpoint every 100 steps;
+- `model_*.pt`: model snapshots at steps 400, 1,200, 2,400 and 4,800;
+- `complete.json`: written only when the run and its requested evaluations finish.
+
+Resume with the same command and directory. The runner rejects changed config
+or source hashes and refuses to overwrite completed runs. Logs may contain
+replayed steps after recovery; retain the last record for each step when
+aggregating. To collect optional PG-19 32K/128K transfer and short generation
+diagnostics, add `--pg19-eval-data` pointing to the data prepared below. These
+are not substitutes for Books context-extension training.
+
+### Continue an existing checkpoint
+
+This is a separate, short-budget experiment and must not be reported as
+from-scratch pretraining:
+
+```bash
+python -m scripts.prepare_inner_comparison --out data/continuation
+CUDA_VISIBLE_DEVICES=0 python -m scripts.inner_training_comparison \
+  --method shared --preset 125m-e2e-ext32k \
+  --ckpt "$TTT_CKPT/125m-ext32k.pt" --data data/continuation \
+  --out results/continuation/shared --steps 120 --accum 4 --seq-length 16384
+python -m scripts.summarize_inner_comparison --root results/continuation
+```
+
+Run `adam`, `exact`, and `fo` in matching sibling directories for a complete
+comparison. The summary leaves missing arms pending. It reports common K=2
+deployment alongside native-rule fields in JSON. Generated harm uses only a
+16K diagnostic; it is not a canonical 128K generation result. This continuation
+runner's Adam path uses the full suffix layout. Use
+`python -m scripts.benchmark_adam_layout --help` to audit it against a chunked
+layout that retains the full KV gradient. The scratch runner already uses that
+optimized baseline. Gradient reductions in the layout audit use FP64.
+
 # Release validation
 
 Validation performed on 2026-09-29.

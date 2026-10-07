@@ -87,6 +87,16 @@ python scripts/run_paper_suite.py --suite configs/suites/main_125m.yaml --smoke
 
 Smoke test 检查权重加载、生成、更新和 clean probe 的执行链路，**不代表论文正式实验结果**。pip 安装和 agent 依赖见[复现指南](REPRODUCE.md#installation)。
 
+## 实验性训练 harness
+
+[训练指南](REPRODUCE.md#experimental-training-harness)提供四种配对训练规则：
+不做 inner writes 的普通 Adam、原始二阶 TTT、一阶 block TTT，以及共享 backward
+的截断一阶 TTT。**已有 checkpoint 续训**与**125M 随机初始化训练**使用独立入口；
+后者沿用官方 TTT-E2E 的 8K / 4,800 步预算，使用公开 DCLM 和独立验证文档。
+
+这些是进行中的算法实验，与论文已发布结果分开。仓库也包含块级 Settlement
+验证工具，但四组训练本身不包含 Settlement gate。
+
 ## 模型权重
 
 权重不放在 Git 仓库中。下载后请按表中的文件名保存，保证配置能找到它们；Dropbox 原始下载名可能不同。

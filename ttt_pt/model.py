@@ -387,11 +387,13 @@ class TTTModel(nn.Module):
         cfg = self.cfg
         full_causal = cfg.seq_modeling_block == "self_attention"
         use_ckpt = os.environ.get("TTT_CKPT_PREFIX") == "1" and torch.is_grad_enabled()
+        if use_ckpt:
+            from torch.utils.checkpoint import checkpoint
         x = self.embed(input_ids)
         cos, sin = self.rope_cos, self.rope_sin
         for i in range(self.n_prefix):
             if use_ckpt:
-                x = torch.utils.checkpoint.checkpoint(
+                x = checkpoint(
                     lambda x_, b=self.layers[i]: b.forward_prefix(
                         x_, cos, sin, cfg.sliding_window_size, full_causal=full_causal
                     ),

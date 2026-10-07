@@ -175,12 +175,35 @@ def compute_loss(
     return_token_nll=False,
     use_remat=True,
     outer_chunk_mask=None,
+    inner_block_chunks=1,
+    inner_block_parallel=False,
+    inner_first_order=False,
 ):
     """batch_tokens: [B, T+1] int64. Splits into inputs/targets and dispatches."""
     input_ids = batch_tokens[:, :-1]
     targets = batch_tokens[:, 1:]
     loss_mask = targets != cfg.model.bos_token_id
     if cfg.training.train_mode == "meta":
+        if inner_block_chunks != 1 or inner_block_parallel or inner_first_order:
+            if outer_chunk_mask is not None or return_token_nll:
+                raise ValueError(
+                    "experimental block inner loop does not support "
+                    "masked outer chunks or token NLL"
+                )
+            from ttt_pt.block_inner import loss_for_sequence_block
+
+            return loss_for_sequence_block(
+                model,
+                input_ids,
+                targets,
+                loss_mask,
+                ilr_multiplier(step, cfg),
+                cfg,
+                block_chunks=inner_block_chunks,
+                create_graph=create_graph,
+                parallel_read=inner_block_parallel,
+                first_order=inner_first_order,
+            )
         if use_remat and create_graph and not return_token_nll:
             assert outer_chunk_mask is None, (
                 "the remat scan accumulates every chunk loss inside a custom "

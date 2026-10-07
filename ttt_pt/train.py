@@ -109,7 +109,32 @@ def main():
         "rollouts. 1 is strictly on-policy and costs a full "
         "autoregressive decode every step.",
     )
+    ap.add_argument(
+        "--inner-block-chunks",
+        type=int,
+        default=1,
+        help="experimental shared-weight chunks per inner update",
+    )
+    ap.add_argument(
+        "--inner-block-parallel",
+        action="store_true",
+        help="evaluate each fixed-weight block with one suffix attention pass",
+    )
+    ap.add_argument(
+        "--inner-first-order",
+        action="store_true",
+        help="stop outer gradients through block update gradients",
+    )
     args = ap.parse_args()
+    block_mode = args.inner_block_chunks != 1 or args.inner_block_parallel or args.inner_first_order
+    if args.inner_block_chunks < 1:
+        ap.error("--inner-block-chunks must be positive")
+    if block_mode and args.closed_loop_chunks:
+        ap.error("experimental block mode does not yet support --closed-loop-chunks")
+    if block_mode and not args.exp_name:
+        ap.error("experimental block mode requires a distinct --exp-name for safe checkpoints")
+    if block_mode and (args.seq_length is None or args.global_batch_size is None):
+        ap.error("experimental block mode requires explicit --seq-length and --global-batch-size")
 
     cfg: Config = PRESETS[args.preset]()
     t = cfg.training
@@ -135,7 +160,10 @@ def main():
     local_bs = t.global_batch_size // (world * t.accum_steps)
 
     torch.manual_seed(t.model_seed)
-    model = TTTModel(cfg.model, max_seq_len=t.seq_length).to(device)
+    rope_span = cfg.model.sliding_window_size + args.inner_block_chunks * cfg.model.mini_batch_size
+    model = TTTModel(
+        cfg.model, max_seq_len=max(t.seq_length, rope_span) if block_mode else t.seq_length
+    ).to(device)
     n_params = sum(p.numel() for p in model.parameters())
     if master:
         print(
@@ -184,6 +212,15 @@ def main():
             print(f"initialized params from {args.init_from}", flush=True)
     if ckpts:
         st = torch.load(ckpts[-1], map_location=device, weights_only=False)
+        inner_signature = {
+            "block_chunks": args.inner_block_chunks,
+            "parallel_read": args.inner_block_parallel,
+            "first_order": args.inner_first_order,
+        }
+        if (block_mode or st.get("inner_loop") is not None) and st.get(
+            "inner_loop"
+        ) != inner_signature:
+            raise ValueError("checkpoint inner-loop rule differs from requested block rule")
         model.load_state_dict(st["model"])
         opt.load_state_dict(st["opt"])
         start_step = st["step"] + 1
@@ -235,8 +272,11 @@ def main():
                 cfg,
                 step,
                 create_graph=True,
-                use_remat=(selfgen is None and not args.no_remat),
+                use_remat=(selfgen is None and not args.no_remat and not block_mode),
                 outer_chunk_mask=omask,
+                inner_block_chunks=args.inner_block_chunks,
+                inner_block_parallel=args.inner_block_parallel,
+                inner_first_order=args.inner_first_order,
             )
             (loss / t.accum_steps).backward()
             loss_acc += loss.item() / t.accum_steps
@@ -272,6 +312,11 @@ def main():
                         "opt": opt.state_dict(),
                         "step": step,
                         "cfg": vars(t),
+                        "inner_loop": {
+                            "block_chunks": args.inner_block_chunks,
+                            "parallel_read": args.inner_block_parallel,
+                            "first_order": args.inner_first_order,
+                        },
                     },
                     exp_dir / f"ckpt_{step + 1}.pt",
                 )

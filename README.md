@@ -110,6 +110,19 @@ The smoke run checks checkpoint loading, generation, updates, and clean
 probes. It is an integration check, not a paper result. The
 [reproduction guide](REPRODUCE.md) also covers pip and agent dependencies.
 
+## Experimental training harness
+
+The [training guide](REPRODUCE.md#experimental-training-harness) includes four
+matched training rules: ordinary Adam without inner writes, original second-order
+TTT, first-order block TTT, and shared-backward truncated first-order TTT.
+It provides separate entry points for **checkpoint continuation** and **125M
+training from random initialization**. The latter follows the official TTT-E2E
+8K / 4,800-step budget with public DCLM data and an independent validation set.
+
+These are ongoing algorithm experiments, separate from the paper's released
+results. Block-level Settlement probes are also included; the four training
+arms themselves do not apply a Settlement gate.
+
 ## Models and data
 
 | Model | Expected checkpoint path | Download |
